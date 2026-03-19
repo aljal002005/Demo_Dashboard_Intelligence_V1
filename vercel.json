@@ -1,6 +1,6 @@
 {
   "buildCommand": "pnpm --filter @workspace/hr-dashboard run build",
-  "outputDirectory": "dist",
+  "outputDirectory": "artifacts/hr-dashboard/build",
   "installCommand": "pnpm install --frozen-lockfile",
   "framework": null,
   "rewrites": [
