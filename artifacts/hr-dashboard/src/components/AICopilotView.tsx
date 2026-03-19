@@ -51,12 +51,12 @@ const RESPONSES: Record<string, Omit<Message, 'id' | 'role' | 'timestamp'>> = {
   },
 };
 
-const matchIntent = (msg: string): string => {
+const matchIntent = (msg: string): string | null => {
   const m = msg.toLowerCase();
   if (m.includes('overtime') || m.includes(' ot ') || m.includes('hours')) return 'overtime';
   if (m.includes('attrition') || m.includes('turnover') || m.includes('retention')) return 'attrition';
-  if (m.includes('headcount') || m.includes('staff') || m.includes('employees')) return 'headcount';
-  return 'overtime';
+  if (m.includes('headcount') || m.includes('staff') || m.includes('employee')) return 'headcount';
+  return null;
 };
 
 const STARTERS = ['Show me overtime trends', 'What is our attrition rate?', 'Summarize current headcount', 'Which department has highest risk?'];

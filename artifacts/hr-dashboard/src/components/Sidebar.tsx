@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import {
-  LayoutGrid, PieChart, FileText, Settings, Users, HelpCircle, LogOut,
-  Briefcase, Zap, Sparkles, ShieldAlert, FlaskConical, ChevronLeft,
-  ChevronRight, HelpingHand
+  LayoutGrid, PieChart, FileText, Settings, Users, LogOut,
+  Briefcase, Sparkles, ShieldAlert, FlaskConical, ChevronLeft,
+  ChevronRight, HelpingHand, LayoutDashboard
 } from 'lucide-react';
 import { ViewTab } from '../types';
 import { ORG_NAME } from '../constants';
@@ -44,9 +44,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, onTabChange, onLog
   ];
 
   const secondaryNav = [
-    { id: 'team', label: 'My Team', icon: Users },
-    { id: 'projects', label: 'Projects', icon: Briefcase },
-    { id: 'integrations', label: 'Integrations', icon: Zap },
+    { id: 'myview', label: 'My View', icon: LayoutDashboard, active: true },
+    { id: 'team', label: 'My Team', icon: Users, active: false },
+    { id: 'projects', label: 'Projects', icon: Briefcase, active: false },
   ];
 
   const NavItem = ({
@@ -105,8 +105,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, onTabChange, onLog
         <OrgIcon />
         {!collapsed && (
           <div className="min-w-0">
-            <p className="text-sm font-extrabold text-[#002f56] dark:text-white truncate leading-tight">HSS</p>
-            <p className="text-[10px] text-slate-400 dark:text-slate-500 truncate">People Analytics</p>
+            <p className="text-sm font-extrabold text-[#002f56] dark:text-white truncate leading-tight">HR Intelligence Hub</p>
+            <p className="text-[10px] text-slate-400 dark:text-slate-500 truncate">HSS Health Network</p>
           </div>
         )}
       </div>
@@ -125,7 +125,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, onTabChange, onLog
         </div>
 
         <SectionLabel label="Workspace" />
-        {secondaryNav.map(({ id, label, icon }) => (
+        {secondaryNav.map(({ id, label, icon, active }) => active ? (
+          <NavItem key={id} id={id} label={label} icon={icon} />
+        ) : (
           <button
             key={id}
             title={collapsed ? label : undefined}

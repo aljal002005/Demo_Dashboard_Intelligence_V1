@@ -119,6 +119,7 @@ export const ScenarioCanvas: React.FC<{ isDarkMode?: boolean }> = ({ isDarkMode 
     projection: ReturnType<typeof computeProjection>;
   }[]>([]);
   const [running, setRunning] = useState(false);
+  const [ran, setRan] = useState(false);
   const [savedFeedback, setSavedFeedback] = useState(false);
   const [scenarioName, setScenarioName] = useState('');
   const [activeMetric, setActiveMetric] = useState<'headcount' | 'attrition'>('headcount');
