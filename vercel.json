@@ -1,6 +1,6 @@
 {
-  "buildCommand": "pnpm --filter @workspace/hr-dashboard run build && mv artifacts/hr-dashboard/build frontend-build",
-  "outputDirectory": "frontend-build",
+  "buildCommand": "pnpm --filter @workspace/hr-dashboard run build",
+  "outputDirectory": "dist",
   "installCommand": "pnpm install --frozen-lockfile",
   "framework": null,
   "rewrites": [
