@@ -1,7 +1,7 @@
 {
-  "buildCommand": "pnpm --filter @workspace/hr-dashboard run build",
+  "buildCommand": "cd artifacts/hr-dashboard && npx vite build",
   "outputDirectory": "artifacts/hr-dashboard/dist/public",
-  "installCommand": "pnpm install",
+  "installCommand": "pnpm install --frozen-lockfile",
   "framework": null,
   "rewrites": [
     { "source": "/(.*)", "destination": "/index.html" }
