@@ -52,7 +52,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin, isDarkMode, toggl
           </svg>
           <div>
             <p className="text-sm font-extrabold tracking-tight">HSS People Analytics</p>
-            <p className="text-[10px] text-blue-300">{ORG_NAME}</p>
+            <p className="text-[10px] text-blue-300">HR Intelligence Hub</p>
           </div>
         </div>
         <button onClick={toggleTheme} className="p-2 rounded-xl text-blue-300 hover:text-white hover:bg-white/10 transition-all">
