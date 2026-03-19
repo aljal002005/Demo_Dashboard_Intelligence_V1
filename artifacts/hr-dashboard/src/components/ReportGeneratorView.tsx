@@ -1,192 +1,357 @@
 import React, { useState } from 'react';
-import { FileText, Download, Sparkles, CheckCircle, Clock, Users, TrendingUp, AlertTriangle, BarChart3, Loader2 } from 'lucide-react';
+import {
+  FileText, Download, Sparkles, CheckCircle, AlertTriangle,
+  Loader2, BarChart3, Clock, TrendingUp, Users, Briefcase, Brain
+} from 'lucide-react';
 import { REPORT_DATA } from '../data/mockData';
 import { ORG_NAME } from '../constants';
-import { SectionGuide } from './SectionGuide';
 
 interface ReportGeneratorViewProps { isDarkMode?: boolean; }
 
-const REPORT_TYPES = [
-  { id: 'executive-summary', label: 'Executive Summary', icon: BarChart3, desc: 'High-level workforce overview for board presentations' },
-  { id: 'overtime', label: 'Overtime Deep-Dive', icon: Clock, desc: 'Detailed OT cost, distribution and risk analysis' },
-  { id: 'attrition', label: 'Attrition Report', icon: TrendingUp, desc: 'Turnover trends, risk factors and retention insights' },
-  { id: 'workforce', label: 'Workforce Snapshot', icon: Users, desc: 'Headcount, vacancies, classification breakdown' },
+const TIME_PERIODS = [
+  { id: 'last-month', label: 'Last Month' },
+  { id: 'q2-2025', label: 'Q2 2025' },
+  { id: 'ytd', label: 'YTD' },
+];
+
+const TEMPLATES = [
+  { id: 'monthly-ops', label: 'Monthly Ops', modules: '5 modules', reportId: 'overtime', accent: false },
+  { id: 'quarterly-review', label: 'Quarterly Review', modules: '6 modules', reportId: 'attrition', accent: false },
+  { id: 'recruitment', label: 'Recruitment', modules: '5 modules', reportId: 'time-to-fill', accent: false },
+  { id: 'full-brief', label: 'Full Brief', modules: 'All modules', reportId: 'executive-summary', accent: true },
+];
+
+const SECTIONS = [
+  { id: 'overtime', label: 'Overtime', icon: Clock },
+  { id: 'attrition', label: 'Attrition', icon: TrendingUp },
+  { id: 'headcount', label: 'Headcount', icon: Users },
+  { id: 'vacancies', label: 'Vacancies', icon: Briefcase },
+  { id: 'engagement', label: 'Engagement', icon: Brain },
+  { id: 'executive-summary', label: 'Executive Summary', icon: BarChart3 },
 ];
 
 export const ReportGeneratorView: React.FC<ReportGeneratorViewProps> = ({ isDarkMode }) => {
-  const [selectedType, setSelectedType] = useState('executive-summary');
+  const [timePeriod, setTimePeriod] = useState('ytd');
+  const [preparedFor, setPreparedFor] = useState('Executive Leadership Team');
+  const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
+  const [selectedSections, setSelectedSections] = useState<string[]>(['executive-summary', 'overtime', 'attrition']);
   const [generating, setGenerating] = useState(false);
   const [generated, setGenerated] = useState(false);
-  const [dateRange, setDateRange] = useState('ytd');
   const [includeAI, setIncludeAI] = useState(true);
+  const [activeReportId, setActiveReportId] = useState('executive-summary');
 
-  const report = REPORT_DATA[selectedType] ?? REPORT_DATA['executive-summary'];
+  const report = REPORT_DATA[activeReportId] ?? REPORT_DATA['executive-summary'];
+
+  const applyTemplate = (t: typeof TEMPLATES[0]) => {
+    setSelectedTemplate(t.id);
+    setActiveReportId(t.reportId);
+    setGenerated(false);
+  };
+
+  const toggleSection = (id: string) => {
+    setSelectedSections(prev =>
+      prev.includes(id) ? prev.filter(s => s !== id) : [...prev, id]
+    );
+    setGenerated(false);
+  };
 
   const handleGenerate = () => {
     setGenerating(true);
     setGenerated(false);
-    setTimeout(() => { setGenerating(false); setGenerated(true); }, 1800);
+    setTimeout(() => { setGenerating(false); setGenerated(true); }, 1600);
   };
 
   const handleExport = () => {
     const content = [
-      `${ORG_NAME} — ${REPORT_TYPES.find(r => r.id === selectedType)?.label}`,
-      `Generated: ${new Date().toLocaleDateString()}`,
+      `${ORG_NAME} — ${preparedFor}`,
+      `Period: ${TIME_PERIODS.find(t => t.id === timePeriod)?.label}`,
+      `Generated: ${new Date().toLocaleDateString('en-CA', { year: 'numeric', month: 'long', day: 'numeric' })}`,
       '',
-      'EXECUTIVE SUMMARY',
+      '=== EXECUTIVE SUMMARY ===',
       report.summary,
       '',
-      'KEY FACTORS',
+      '=== KEY FACTORS ===',
       ...report.keyFactors.map(f => `• ${f}`),
       '',
-      'RECOMMENDATION',
+      '=== RECOMMENDATION ===',
       report.recommendation,
     ].join('\n');
     const blob = new Blob([content], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${selectedType}-report-${new Date().toISOString().split('T')[0]}.txt`;
+    a.download = `briefing-${new Date().toISOString().split('T')[0]}.txt`;
     a.click();
     URL.revokeObjectURL(url);
   };
 
+  const periodLabel = TIME_PERIODS.find(t => t.id === timePeriod)?.label ?? 'YTD';
+
   return (
-    <div className="max-w-5xl mx-auto px-6 py-8 animate-fade-in">
-      <SectionGuide
-        title="Report Generator"
-        description="Select a report type, configure your parameters, and generate a formatted report with AI-enhanced insights. Reports can be exported as PDF or CSV."
-        tips={['Choose Executive Summary for board-ready one-pagers', 'Enable AI Insights for Gemini-powered narrative analysis']}
-      />
-
-      <div className="grid md:grid-cols-3 gap-6">
-        {/* Config panel */}
-        <div className="space-y-5">
-          <div className="bg-white dark:bg-slate-800 rounded-2xl p-5 border border-slate-200 dark:border-slate-700 shadow-sm">
-            <h3 className="text-sm font-extrabold text-slate-800 dark:text-white mb-4">Report Type</h3>
-            <div className="space-y-2">
-              {REPORT_TYPES.map(rt => {
-                const Icon = rt.icon;
-                const active = selectedType === rt.id;
-                return (
-                  <button key={rt.id} onClick={() => { setSelectedType(rt.id); setGenerated(false); }}
-                    className={`w-full flex items-start gap-3 p-3 rounded-xl border transition-all text-left ${active ? 'bg-[#002f56] border-[#002f56] text-white' : 'border-slate-200 dark:border-slate-700 hover:border-blue-300 dark:hover:border-blue-700 text-slate-700 dark:text-slate-300'}`}
-                  >
-                    <Icon size={16} className={`shrink-0 mt-0.5 ${active ? 'text-white' : 'text-slate-400'}`} />
-                    <div>
-                      <p className={`text-xs font-extrabold ${active ? 'text-white' : ''}`}>{rt.label}</p>
-                      <p className={`text-[10px] mt-0.5 leading-tight ${active ? 'text-blue-200' : 'text-slate-400'}`}>{rt.desc}</p>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          <div className="bg-white dark:bg-slate-800 rounded-2xl p-5 border border-slate-200 dark:border-slate-700 shadow-sm space-y-4">
-            <h3 className="text-sm font-extrabold text-slate-800 dark:text-white">Parameters</h3>
-            <div>
-              <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest block mb-1.5">Date Range</label>
-              <select value={dateRange} onChange={e => setDateRange(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-sm rounded-xl p-2.5 outline-none text-slate-700 dark:text-slate-200">
-                <option value="ytd">Year to Date</option>
-                <option value="q4">Q4 2025</option>
-                <option value="q3">Q3 2025</option>
-                <option value="fy">Full Year FY 2025</option>
-              </select>
-            </div>
-            <label className="flex items-center gap-3 cursor-pointer group">
-              <div className={`w-10 h-5 rounded-full transition-all ${includeAI ? 'bg-violet-500' : 'bg-slate-200 dark:bg-slate-700'} relative`} onClick={() => setIncludeAI(a => !a)}>
-                <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-all ${includeAI ? 'left-5' : 'left-0.5'}`} />
-              </div>
-              <div>
-                <p className="text-xs font-bold text-slate-700 dark:text-slate-300">Include AI Insights</p>
-                <p className="text-[10px] text-slate-400">Gemini-powered narrative</p>
-              </div>
-            </label>
-            <button onClick={handleGenerate} disabled={generating}
-              className="w-full py-2.5 rounded-xl bg-[#002f56] text-white text-sm font-extrabold hover:bg-[#003f73] disabled:opacity-60 transition-all shadow-md shadow-blue-900/20 flex items-center justify-center gap-2"
-            >
-              {generating ? <><Loader2 size={14} className="animate-spin" /> Generating...</> : <><Sparkles size={14} /> Generate Report</>}
-            </button>
-          </div>
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-900 transition-colors">
+      <div className="max-w-6xl mx-auto px-6 py-8 animate-fade-in">
+        <div className="mb-7">
+          <h1 className="text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">Report Builder</h1>
+          <p className="text-slate-500 dark:text-slate-400 mt-1.5">Configure your executive briefing below.</p>
         </div>
 
-        {/* Preview */}
-        <div className="md:col-span-2">
-          {!generated && !generating && (
-            <div className="h-full flex flex-col items-center justify-center py-24 text-slate-400 border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-3xl">
-              <FileText size={48} className="mb-4 opacity-30" />
-              <p className="font-bold">Select a report type and click Generate</p>
-              <p className="text-sm mt-1">Your report preview will appear here</p>
-            </div>
-          )}
-          {generating && (
-            <div className="h-full flex flex-col items-center justify-center py-24 animate-fade-in">
-              <Loader2 size={40} className="animate-spin text-[#002f56] dark:text-blue-400 mb-4" />
-              <p className="font-bold text-slate-600 dark:text-slate-300">Generating your report...</p>
-              <p className="text-sm text-slate-400 mt-1">Analyzing data and applying AI insights</p>
-            </div>
-          )}
-          {generated && (
-            <div className="bg-white dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden animate-scale-in">
-              {/* Report header */}
-              <div className="bg-gradient-to-r from-[#001e38] to-[#002f56] p-6 text-white">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-[10px] text-blue-300 font-bold uppercase tracking-widest mb-1">{ORG_NAME}</p>
-                    <h2 className="text-lg font-extrabold">{REPORT_TYPES.find(r => r.id === selectedType)?.label}</h2>
-                    <p className="text-xs text-blue-200 mt-1">Generated {new Date().toLocaleDateString('en-CA', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
-                  </div>
-                  <button onClick={handleExport} className="flex items-center gap-2 px-4 py-2 bg-white/20 hover:bg-white/30 rounded-xl text-sm font-bold transition-all border border-white/20">
-                    <Download size={14} /> Export
-                  </button>
-                </div>
-              </div>
+        <div className="grid lg:grid-cols-5 gap-6">
+          {/* ── Left config panel ── */}
+          <div className="lg:col-span-2 space-y-4">
 
-              {/* KPIs */}
-              {report.kpis && (
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-6 border-b border-slate-100 dark:border-slate-700">
-                  {report.kpis.map((kpi, i) => (
-                    <div key={i} className="text-center">
-                      <p className="text-2xl font-extrabold text-slate-900 dark:text-white">{kpi.value}</p>
-                      <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5 font-semibold">{kpi.label}</p>
-                      <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-lg mt-1 inline-block ${kpi.status === 'critical' ? 'bg-rose-100 dark:bg-rose-900/30 text-rose-600 dark:text-rose-400' : kpi.status === 'warning' ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400' : 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400'}`}>
-                        {kpi.change}
-                      </span>
-                    </div>
+            {/* Report Settings */}
+            <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm p-5">
+              <p className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-4">Report Settings</p>
+
+              <div className="mb-5">
+                <label className="text-sm font-semibold text-slate-700 dark:text-slate-300 block mb-2">Time Period</label>
+                <div className="flex rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden bg-slate-50 dark:bg-slate-900">
+                  {TIME_PERIODS.map(t => (
+                    <button
+                      key={t.id}
+                      onClick={() => { setTimePeriod(t.id); setGenerated(false); }}
+                      className={`flex-1 py-2.5 text-sm font-semibold transition-all ${
+                        timePeriod === t.id
+                          ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm'
+                          : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
+                      }`}
+                    >
+                      {t.label}
+                    </button>
                   ))}
                 </div>
-              )}
+              </div>
 
-              {/* Body */}
-              <div className="p-6 space-y-5">
-                <div>
-                  <h4 className="text-sm font-extrabold text-slate-800 dark:text-white mb-2">Executive Summary</h4>
-                  <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">{report.summary}</p>
-                </div>
-                <div>
-                  <h4 className="text-sm font-extrabold text-slate-800 dark:text-white mb-2">Key Factors</h4>
-                  <ul className="space-y-2">
-                    {report.keyFactors.map((f, i) => (
-                      <li key={i} className={`flex items-start gap-2 text-sm p-3 rounded-xl ${f.toLowerCase().startsWith('risk') ? 'bg-rose-50 dark:bg-rose-900/20 text-rose-700 dark:text-rose-300' : 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300'}`}>
-                        {f.toLowerCase().startsWith('risk') ? <AlertTriangle size={13} className="shrink-0 mt-0.5" /> : <CheckCircle size={13} className="shrink-0 mt-0.5" />}
-                        {f}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-                {includeAI && (
-                  <div className="bg-violet-50 dark:bg-violet-900/20 border border-violet-200 dark:border-violet-800 rounded-2xl p-4">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Sparkles size={14} className="text-violet-600 dark:text-violet-400" />
-                      <span className="text-xs font-extrabold text-violet-700 dark:text-violet-300 uppercase tracking-wider">AI Strategic Recommendation</span>
-                    </div>
-                    <p className="text-sm text-violet-800 dark:text-violet-300 leading-relaxed">{report.recommendation}</p>
-                  </div>
-                )}
+              <div>
+                <label className="text-sm font-semibold text-slate-700 dark:text-slate-300 block mb-2">Prepared For</label>
+                <input
+                  type="text"
+                  value={preparedFor}
+                  onChange={e => { setPreparedFor(e.target.value); setGenerated(false); }}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm text-slate-700 dark:text-slate-200 outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-800 transition-all"
+                />
               </div>
             </div>
-          )}
+
+            {/* Quick Templates */}
+            <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm p-5">
+              <p className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-4">Quick Templates</p>
+              <div className="grid grid-cols-2 gap-2">
+                {TEMPLATES.map(t => (
+                  <button
+                    key={t.id}
+                    onClick={() => applyTemplate(t)}
+                    className={`text-left p-3.5 rounded-xl border transition-all ${
+                      selectedTemplate === t.id
+                        ? t.accent
+                          ? 'border-emerald-300 dark:border-emerald-700 bg-emerald-50 dark:bg-emerald-900/20'
+                          : 'border-blue-300 dark:border-blue-700 bg-blue-50 dark:bg-blue-900/20'
+                        : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700/30'
+                    }`}
+                  >
+                    <p className={`text-sm font-extrabold ${
+                      selectedTemplate === t.id && t.accent ? 'text-emerald-700 dark:text-emerald-400'
+                      : selectedTemplate === t.id ? 'text-blue-700 dark:text-blue-400'
+                      : 'text-slate-800 dark:text-slate-200'
+                    }`}>
+                      {t.label}
+                    </p>
+                    <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">{t.modules}</p>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Sections */}
+            <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm p-5">
+              <p className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-4">Include Sections</p>
+              <div className="space-y-1.5">
+                {SECTIONS.map(s => {
+                  const active = selectedSections.includes(s.id);
+                  const Icon = s.icon;
+                  return (
+                    <button
+                      key={s.id}
+                      onClick={() => toggleSection(s.id)}
+                      className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all ${
+                        active
+                          ? 'bg-[#002f56]/5 dark:bg-blue-900/20 text-[#002f56] dark:text-blue-400'
+                          : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700/30'
+                      }`}
+                    >
+                      <div className={`w-4 h-4 rounded border-2 flex items-center justify-center shrink-0 transition-all ${active ? 'bg-[#002f56] dark:bg-blue-500 border-[#002f56] dark:border-blue-500' : 'border-slate-300 dark:border-slate-600'}`}>
+                        {active && <CheckCircle size={10} className="text-white" />}
+                      </div>
+                      <Icon size={13} className="shrink-0" />
+                      <span className="text-xs font-semibold">{s.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-700">
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <div
+                    className={`w-10 h-5 rounded-full transition-all relative shrink-0 ${includeAI ? 'bg-violet-500' : 'bg-slate-200 dark:bg-slate-700'}`}
+                    onClick={() => setIncludeAI(a => !a)}
+                  >
+                    <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-all ${includeAI ? 'left-5' : 'left-0.5'}`} />
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold text-slate-700 dark:text-slate-300">Include AI Insights</p>
+                    <p className="text-[10px] text-slate-400">AI-powered narrative</p>
+                  </div>
+                </label>
+              </div>
+
+              <button
+                onClick={handleGenerate}
+                disabled={generating || selectedSections.length === 0}
+                className="w-full mt-4 py-2.5 rounded-xl bg-[#002f56] text-white text-sm font-extrabold hover:bg-[#003f73] disabled:opacity-60 transition-all shadow-md shadow-blue-900/20 flex items-center justify-center gap-2"
+              >
+                {generating
+                  ? <><Loader2 size={14} className="animate-spin" /> Generating...</>
+                  : <><Sparkles size={14} /> Generate Report</>
+                }
+              </button>
+            </div>
+          </div>
+
+          {/* ── Right: output panel ── */}
+          <div className="lg:col-span-3">
+            {!generated && !generating && (
+              <div className="h-full min-h-96 flex flex-col items-center justify-center py-24 text-slate-400 border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-2xl">
+                <FileText size={48} className="mb-4 opacity-25" />
+                <p className="font-bold text-slate-500 dark:text-slate-400">Configure settings and click Generate</p>
+                <p className="text-sm mt-1 text-slate-400">Your report preview will appear here</p>
+              </div>
+            )}
+
+            {generating && (
+              <div className="h-full min-h-96 flex flex-col items-center justify-center py-24 animate-fade-in">
+                <div className="relative mb-6">
+                  <div className="w-16 h-16 rounded-full border-4 border-blue-100 dark:border-blue-900" />
+                  <div className="absolute inset-0 w-16 h-16 rounded-full border-4 border-[#002f56] border-t-transparent animate-spin" />
+                </div>
+                <p className="font-bold text-slate-700 dark:text-slate-300">Generating your report...</p>
+                <p className="text-sm text-slate-400 mt-1">Analysing data · Applying AI insights</p>
+              </div>
+            )}
+
+            {generated && (
+              <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden animate-fade-in">
+                {/* Report header */}
+                <div className="bg-gradient-to-r from-[#001e38] to-[#002f56] px-6 py-5 text-white">
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <p className="text-[10px] text-blue-300 font-bold uppercase tracking-widest mb-0.5">{ORG_NAME}</p>
+                      <h2 className="text-lg font-extrabold">Executive Briefing</h2>
+                      <p className="text-xs text-blue-200 mt-1">
+                        {periodLabel} · Prepared for: {preparedFor} · {new Date().toLocaleDateString('en-CA', { month: 'long', day: 'numeric', year: 'numeric' })}
+                      </p>
+                    </div>
+                    <button
+                      onClick={handleExport}
+                      className="flex items-center gap-2 px-3 py-2 bg-white/15 hover:bg-white/25 rounded-xl text-xs font-bold transition-all border border-white/20 shrink-0"
+                    >
+                      <Download size={13} /> Export
+                    </button>
+                  </div>
+                </div>
+
+                {/* KPIs */}
+                {report.kpis && (
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-5 border-b border-slate-100 dark:border-slate-700">
+                    {report.kpis.map((kpi, i) => (
+                      <div key={i} className="text-center">
+                        <p className="text-2xl font-extrabold text-slate-900 dark:text-white">{kpi.value}</p>
+                        <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5 font-semibold leading-tight">{kpi.label}</p>
+                        <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-lg mt-1 inline-block ${
+                          kpi.status === 'critical' ? 'bg-rose-100 dark:bg-rose-900/30 text-rose-600 dark:text-rose-400'
+                          : kpi.status === 'warning' ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400'
+                          : 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400'
+                        }`}>{kpi.change}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Body */}
+                <div className="p-6 space-y-5">
+                  <div>
+                    <h4 className="text-xs font-extrabold text-slate-500 uppercase tracking-wider mb-2">Executive Summary</h4>
+                    <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">{report.summary}</p>
+                  </div>
+
+                  <div>
+                    <h4 className="text-xs font-extrabold text-slate-500 uppercase tracking-wider mb-3">Key Factors</h4>
+                    <ul className="space-y-2">
+                      {report.keyFactors.map((f, i) => {
+                        const isRisk = f.toLowerCase().startsWith('risk');
+                        return (
+                          <li key={i} className={`flex items-start gap-2 text-sm p-3 rounded-xl border ${
+                            isRisk
+                              ? 'bg-rose-50 dark:bg-rose-900/20 text-rose-700 dark:text-rose-300 border-rose-100 dark:border-rose-900'
+                              : 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300 border-emerald-100 dark:border-emerald-900'
+                          }`}>
+                            {isRisk
+                              ? <AlertTriangle size={13} className="shrink-0 mt-0.5 text-rose-500" />
+                              : <CheckCircle size={13} className="shrink-0 mt-0.5 text-emerald-500" />
+                            }
+                            {f}
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </div>
+
+                  {includeAI && (
+                    <div className="bg-violet-50 dark:bg-violet-900/20 border border-violet-200 dark:border-violet-800 rounded-2xl p-4">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Sparkles size={13} className="text-violet-600 dark:text-violet-400" />
+                        <span className="text-[10px] font-extrabold text-violet-700 dark:text-violet-300 uppercase tracking-wider">AI Strategic Recommendation</span>
+                      </div>
+                      <p className="text-sm text-violet-800 dark:text-violet-300 leading-relaxed">{report.recommendation}</p>
+                    </div>
+                  )}
+
+                  {report.tableData && (
+                    <div>
+                      <h4 className="text-xs font-extrabold text-slate-500 uppercase tracking-wider mb-3">Data Breakdown</h4>
+                      <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-700">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="bg-slate-50 dark:bg-slate-900/50">
+                              <th className="text-left px-4 py-2.5 text-[10px] font-extrabold text-slate-500 uppercase tracking-wide">Segment</th>
+                              <th className="text-right px-4 py-2.5 text-[10px] font-extrabold text-slate-500 uppercase tracking-wide">Current</th>
+                              <th className="text-right px-4 py-2.5 text-[10px] font-extrabold text-slate-500 uppercase tracking-wide">Prior</th>
+                              <th className="text-right px-4 py-2.5 text-[10px] font-extrabold text-slate-500 uppercase tracking-wide">Change</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
+                            {report.tableData.map((row, i) => (
+                              <tr key={i} className="hover:bg-slate-50 dark:hover:bg-slate-700/20 transition-colors">
+                                <td className="px-4 py-2.5 text-slate-700 dark:text-slate-300 font-medium">{row.label}</td>
+                                <td className="px-4 py-2.5 text-right font-extrabold text-slate-900 dark:text-white font-mono">{row.current}</td>
+                                <td className="px-4 py-2.5 text-right text-slate-500 font-mono">{row.previous}</td>
+                                <td className={`px-4 py-2.5 text-right font-extrabold font-mono ${
+                                  row.status === 'critical' ? 'text-rose-500' : row.status === 'warning' ? 'text-amber-500' : 'text-emerald-500'
+                                }`}>{row.change}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+
+                  <p className="text-[10px] text-slate-400 text-center pt-2 border-t border-slate-100 dark:border-slate-700">
+                    Confidential — {ORG_NAME} HR Intelligence Hub · {new Date().toLocaleDateString('en-CA')}
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>
