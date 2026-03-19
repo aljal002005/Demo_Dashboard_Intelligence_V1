@@ -95,20 +95,25 @@ const App: React.FC = () => {
 
   const renderMainContent = () => {
     if (selectedItem) {
-      // Overtime gets its own specialized view
-      if (selectedItem.id === 'overtime') {
-        return <OvertimeView item={selectedItem} onBack={handleBack} isDarkMode={isDarkMode} />;
-      }
-      if (currentTab === 'analytics') {
-        return <AdvancedAnalyticsView item={selectedItem} onBack={handleBack} isDarkMode={isDarkMode} />;
-      }
-      if (currentTab === 'reports') {
-        return <MetricDetailView item={selectedItem} onBack={handleBack} isDarkMode={isDarkMode} />;
-      }
-      return <DetailView item={selectedItem} onBack={handleBack} isDarkMode={isDarkMode} />;
+      if (selectedItem.id === 'overtime') return <OvertimeView item={selectedItem} onBack={handleBack} isDarkMode={isDarkMode} dateRange={dateRange} />;
+      if (currentTab === 'analytics') return <AdvancedAnalyticsView item={selectedItem} onBack={handleBack} isDarkMode={isDarkMode} dateRange={dateRange} />;
+      if (currentTab === 'reports') return <MetricDetailView item={selectedItem} onBack={handleBack} isDarkMode={isDarkMode} dateRange={dateRange} />;
+      return <DetailView item={selectedItem} onBack={handleBack} isDarkMode={isDarkMode} dateRange={dateRange} />;
     }
 
     switch (currentTab) {
+      case 'team':
+        return (
+          <DashboardGrid
+            onItemClick={handleTileClick}
+            title="My Team Metrics"
+            description="View metrics strictly limited to your direct reports and immediate organizational hierarchy."
+            isDarkMode={isDarkMode}
+            searchTerm={searchTerm}
+            username={currentUser}
+            dateRange={dateRange}
+          />
+        );
       case 'overview':
         return (
           <DashboardGrid
@@ -117,6 +122,7 @@ const App: React.FC = () => {
             searchTerm={searchTerm}
             showAIBriefing
             username={currentUser}
+            dateRange={dateRange}
           />
         );
       case 'analytics':

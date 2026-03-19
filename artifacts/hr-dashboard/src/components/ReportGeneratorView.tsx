@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import {
   FileText, Download, Sparkles, CheckCircle, AlertTriangle,
-  Loader2, BarChart3, Clock, TrendingUp, Users, Briefcase, Brain
+  Loader2, BarChart3, Clock, TrendingUp, Users, Briefcase, Brain, HelpCircle
 } from 'lucide-react';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer } from 'recharts';
 import { REPORT_DATA } from '../data/mockData';
 import { ORG_NAME } from '../constants';
 
@@ -197,9 +198,19 @@ export const ReportGeneratorView: React.FC<ReportGeneratorViewProps> = ({ isDark
                   >
                     <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-all ${includeAI ? 'left-5' : 'left-0.5'}`} />
                   </div>
-                  <div>
-                    <p className="text-xs font-bold text-slate-700 dark:text-slate-300">Include AI Insights</p>
-                    <p className="text-[10px] text-slate-400">AI-powered narrative</p>
+                  <div className="flex items-center gap-1">
+                    <div>
+                      <p className="text-xs font-bold text-slate-700 dark:text-slate-300">Include AI Insights</p>
+                      <p className="text-[10px] text-slate-400">AI-powered narrative</p>
+                    </div>
+                    <div className="relative group cursor-help ml-2">
+                      <HelpCircle size={14} className="text-slate-400 hover:text-violet-500 transition-colors" />
+                      <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-64 p-3 bg-slate-800 dark:bg-slate-700 text-white rounded-xl shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 text-[10px] space-y-1.5 pointer-events-none">
+                        <p><span className="font-bold text-violet-300">AI Analysis:</span> Adds a synthesized strategic recommendation by cross-referencing all selected modules.</p>
+                        <p><span className="font-bold text-violet-300">Tone:</span> Automatically adjusted for executive leadership review.</p>
+                        <div className="absolute left-1/2 -bottom-1 -translate-x-1/2 border-4 border-transparent border-t-slate-800 dark:border-t-slate-700" />
+                      </div>
+                    </div>
                   </div>
                 </label>
               </div>
@@ -314,6 +325,38 @@ export const ReportGeneratorView: React.FC<ReportGeneratorViewProps> = ({ isDark
                       <p className="text-sm text-violet-800 dark:text-violet-300 leading-relaxed">{report.recommendation}</p>
                     </div>
                   )}
+
+                  <div className="bg-slate-50 dark:bg-slate-900/40 border border-slate-100 dark:border-slate-700 rounded-2xl p-5 mb-5">
+                    <h4 className="text-xs font-extrabold text-slate-500 uppercase tracking-wider mb-4">Historical Trend Analysis</h4>
+                    <div className="h-52">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <AreaChart data={[
+                          { month: 'Jan', value: 65, target: 60 }, { month: 'Feb', value: 59, target: 60 },
+                          { month: 'Mar', value: 80, target: 60 }, { month: 'Apr', value: 81, target: 62 },
+                          { month: 'May', value: 56, target: 65 }, { month: 'Jun', value: 55, target: 65 },
+                          { month: 'Jul', value: 40, target: 65 }, { month: 'Aug', value: 90, target: 68 },
+                          { month: 'Sep', value: 78, target: 70 }, { month: 'Oct', value: 65, target: 72 },
+                        ]}>
+                          <defs>
+                            <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="5%" stopColor="#0ea5e9" stopOpacity={0.3}/>
+                              <stop offset="95%" stopColor="#0ea5e9" stopOpacity={0}/>
+                            </linearGradient>
+                          </defs>
+                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={isDarkMode ? '#334155' : '#e2e8f0'} />
+                          <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#64748b' }} />
+                          <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#64748b' }} />
+                          <RechartsTooltip 
+                            contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }}
+                            labelStyle={{ color: '#64748b', fontWeight: 'bold', fontSize: '10px', textTransform: 'uppercase' }}
+                            itemStyle={{ fontSize: '12px', fontWeight: 'bold' }}
+                          />
+                          <Area type="monotone" name="Target" dataKey="target" stroke="#94a3b8" strokeWidth={2} strokeDasharray="4 4" fill="none" />
+                          <Area type="monotone" name="Actual Performance" dataKey="value" stroke="#0ea5e9" strokeWidth={3} fillOpacity={1} fill="url(#colorValue)" />
+                        </AreaChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
 
                   {report.tableData && (
                     <div>

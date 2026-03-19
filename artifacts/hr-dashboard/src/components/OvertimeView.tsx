@@ -4,7 +4,7 @@ import { ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip, Respons
 import { DashboardItem } from '../types';
 import { ORG_NAME } from '../constants';
 
-interface OvertimeViewProps { item: DashboardItem; onBack: () => void; isDarkMode?: boolean; }
+interface OvertimeViewProps { item: DashboardItem; onBack: () => void; isDarkMode?: boolean; dateRange?: string; }
 
 const TREND = [
   { month: 'Apr 25', val: 2.4, trend: 'flat' }, { month: 'May 25', val: 2.7, trend: 'up' },
@@ -43,9 +43,23 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   );
 };
 
-export const OvertimeView: React.FC<OvertimeViewProps> = ({ item, onBack, isDarkMode }) => {
+export const OvertimeView: React.FC<OvertimeViewProps> = ({ item, onBack, isDarkMode, dateRange = 'ytd' }) => {
   const gridColor = isDarkMode ? '#334155' : '#f1f5f9';
   const tickColor = isDarkMode ? '#94a3b8' : '#64748b';
+
+  const variation = dateRange === 'ytd' ? 1 : dateRange === 'q4' ? 0.25 : dateRange === 'q3' ? 0.25 : 0.08;
+  const filteredTrend = dateRange === 'ytd' ? TREND : Array.from({length: 9}, (_, i) => {
+    const prefix = dateRange === 'q4' ? 'Q4 W' : dateRange === 'q3' ? 'Q3 W' : 'W';
+    const val = 2.5 + Math.random() * 1.5;
+    return {
+      month: `${prefix}${i + 1}`,
+      val: parseFloat(val.toFixed(1)),
+      trend: val > 3.2 ? 'down' : val < 2.8 ? 'up' : 'flat'
+    };
+  });
+  const filteredUnion = UNION_DATA.map(u => ({ ...u, ot: u.ot * variation }));
+  const filteredZones = ZONES.map(z => ({ ...z, value: z.value * variation }));
+  const multiplierText = (2.08 * variation).toFixed(2);
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-900 transition-colors animate-fade-in">
@@ -58,7 +72,7 @@ export const OvertimeView: React.FC<OvertimeViewProps> = ({ item, onBack, isDark
             </button>
             <div>
               <h1 className="text-xl font-extrabold text-slate-900 dark:text-white">Overtime (OT) Hours</h1>
-              <p className="text-xs text-slate-400 mt-0.5">{ORG_NAME} · FY 2026 YTD</p>
+              <p className="text-xs text-slate-400 mt-0.5">{ORG_NAME} · FY 2026 {dateRange === 'ytd' ? 'YTD' : dateRange.toUpperCase()}</p>
             </div>
           </div>
           <div className="hidden lg:block text-xs text-slate-500 dark:text-slate-400 bg-amber-50 dark:bg-amber-900/20 px-3 py-2 rounded-xl border border-amber-200 dark:border-amber-800 max-w-sm text-right">
@@ -77,7 +91,7 @@ export const OvertimeView: React.FC<OvertimeViewProps> = ({ item, onBack, isDark
             <div>
               <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest mb-1">FY 2026 YTD</p>
               <div className="flex items-baseline gap-2">
-                <span className="text-3xl font-extrabold text-[#002f56] dark:text-white">2.08M</span>
+                <span className="text-3xl font-extrabold text-[#002f56] dark:text-white">{multiplierText}M</span>
                 <span className="text-sm text-slate-500">hrs</span>
               </div>
               <p className="text-lg font-extrabold text-[#78be20] mt-0.5">2.9% OT</p>
@@ -86,7 +100,7 @@ export const OvertimeView: React.FC<OvertimeViewProps> = ({ item, onBack, isDark
           <div className="md:col-span-3 bg-white dark:bg-slate-800 rounded-2xl p-4 border border-slate-200 dark:border-slate-700 shadow-sm overflow-x-auto">
             <p className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400 mb-3 px-2">Monthly OT% Trend</p>
             <div className="flex items-center min-w-[500px]">
-              {TREND.map((t, i) => (
+              {filteredTrend.map((t: any, i) => (
                 <div key={i} className="flex flex-col items-center flex-1 px-2 border-r border-slate-100 dark:border-slate-700 last:border-0 group cursor-default">
                   <span className="text-[9px] font-bold text-slate-400 mb-2 uppercase">{t.month}</span>
                   <div className="mb-1.5 group-hover:scale-110 transition-transform">
@@ -107,7 +121,7 @@ export const OvertimeView: React.FC<OvertimeViewProps> = ({ item, onBack, isDark
             <h3 className="text-base font-extrabold text-slate-800 dark:text-white mb-6">OT Hours by Union</h3>
             <div className="h-64">
               <ResponsiveContainer width="100%" height="100%">
-                <ComposedChart data={UNION_DATA} layout="vertical" barSize={18}>
+                <ComposedChart data={filteredUnion} layout="vertical" barSize={18}>
                   <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke={gridColor} />
                   <XAxis type="number" axisLine={false} tickLine={false} tick={{ fill: tickColor, fontSize: 10 }} tickFormatter={v => `${(v / 1000).toFixed(0)}k`} />
                   <YAxis type="category" dataKey="name" axisLine={false} tickLine={false} tick={{ fill: tickColor, fontSize: 11, fontWeight: 600 }} width={70} />
@@ -125,15 +139,15 @@ export const OvertimeView: React.FC<OvertimeViewProps> = ({ item, onBack, isDark
               <div className="h-40 w-40 shrink-0">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
-                    <Pie data={ZONES} cx="50%" cy="50%" innerRadius={40} outerRadius={65} dataKey="value" paddingAngle={2}>
-                      {ZONES.map((z, i) => <Cell key={i} fill={z.color} />)}
+                    <Pie data={filteredZones} cx="50%" cy="50%" innerRadius={40} outerRadius={65} dataKey="value" paddingAngle={2}>
+                      {filteredZones.map((z, i) => <Cell key={i} fill={z.color} />)}
                     </Pie>
                     <Tooltip formatter={(v: number) => `${(v / 1000).toFixed(0)}k hrs`} />
                   </PieChart>
                 </ResponsiveContainer>
               </div>
               <div className="flex-1 space-y-2">
-                {ZONES.map(z => (
+                {filteredZones.map(z => (
                   <div key={z.name} className="flex items-center gap-2">
                     <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: z.color }} />
                     <span className="text-xs font-semibold text-slate-700 dark:text-slate-300 flex-1">{z.name}</span>

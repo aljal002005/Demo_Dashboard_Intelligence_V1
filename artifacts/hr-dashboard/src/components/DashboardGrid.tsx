@@ -18,6 +18,7 @@ interface DashboardGridProps {
   showAIBriefing?: boolean;
   searchTerm?: string;
   username?: string;
+  dateRange?: string;
 }
 
 const STATUS_ICON: Record<string, React.ComponentType<any>> = {
@@ -61,11 +62,12 @@ const CATEGORY_META = {
 export const DashboardGrid: React.FC<DashboardGridProps> = ({
   onItemClick,
   title = 'Overview',
-  description = 'Access key performance indicators and workforce trends across HSS Health Network.',
+  description = 'Access key performance indicators and workforce trends across the organization.',
   isDarkMode,
   showAIBriefing = false,
   searchTerm = '',
   username = 'Admin',
+  dateRange = 'ytd',
 }) => {
   const [alertsCollapsed, setAlertsCollapsed] = useState(false);
 
@@ -75,6 +77,12 @@ export const DashboardGrid: React.FC<DashboardGridProps> = ({
 
   const filterItems = (items: DashboardItem[]) =>
     searchTerm ? items.filter(i => i.title.toLowerCase().includes(searchTerm.toLowerCase())) : items;
+    
+  // Modify alerts based on dateRange so the top section visibly changes
+  const activeAlerts = dateRange === 'q4' ? OPERATIONAL_ALERTS.slice(1, 4) 
+    : dateRange === 'q3' ? [OPERATIONAL_ALERTS[0], OPERATIONAL_ALERTS[2]] 
+    : dateRange === 'last month' ? [OPERATIONAL_ALERTS[3]]
+    : OPERATIONAL_ALERTS;
 
   const CategorySection = ({
     theme, items
@@ -89,12 +97,11 @@ export const DashboardGrid: React.FC<DashboardGridProps> = ({
           <div className={`w-2.5 h-2.5 rounded-full ${meta.dot} shrink-0`} />
           <div>
             <h2 className={`text-sm font-extrabold ${meta.color} uppercase tracking-wider`}>{meta.label}</h2>
-            <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5 hidden sm:block">{meta.description}</p>
           </div>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 stagger">
           {filtered.map(item => (
-            <DashboardTile key={item.id} item={item} onClick={onItemClick} />
+            <DashboardTile key={item.id} item={item} onClick={onItemClick} dateRange={dateRange} />
           ))}
         </div>
       </section>
@@ -121,7 +128,7 @@ export const DashboardGrid: React.FC<DashboardGridProps> = ({
                 Active Alerts
               </span>
               <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-100 dark:bg-rose-900/30 text-rose-600 dark:text-rose-400">
-                {OPERATIONAL_ALERTS.filter(a => a.metric.status === 'critical').length} critical
+                {activeAlerts.filter(a => a.metric.status === 'critical').length} critical
               </span>
             </div>
             {alertsCollapsed
@@ -131,7 +138,7 @@ export const DashboardGrid: React.FC<DashboardGridProps> = ({
           </button>
 
           <div className={`grid grid-cols-2 md:grid-cols-4 gap-3 overflow-hidden transition-all duration-300 ${alertsCollapsed ? 'max-h-0 opacity-0' : 'max-h-96 opacity-100'}`}>
-            {OPERATIONAL_ALERTS.map(alert => {
+            {activeAlerts.map(alert => {
               const StatusIcon = STATUS_ICON[alert.metric.status] ?? AlertTriangle;
               const colorClass = STATUS_COLOR[alert.metric.status] ?? '';
               return (

@@ -16,6 +16,7 @@ interface MetricDetailViewProps {
   item: DashboardItem;
   onBack: () => void;
   isDarkMode?: boolean;
+  dateRange?: string;
 }
 
 type Tab = 'overview' | 'analysis' | 'trends' | 'report';
@@ -109,7 +110,7 @@ const generateZoneData = (itemId: string, zone: string | null, year: string) => 
   return { total, target, zones, unions, classification };
 };
 
-export const MetricDetailView: React.FC<MetricDetailViewProps> = ({ item, onBack, isDarkMode }) => {
+export const MetricDetailView: React.FC<MetricDetailViewProps> = ({ item, onBack, isDarkMode, dateRange = 'ytd' }) => {
   const report = REPORT_DATA[item.id] ?? REPORT_DATA['executive-summary'];
   const [activeTab, setActiveTab] = useState<Tab>('overview');
   const [activeYear, setActiveYear] = useState('FY 2026');
@@ -122,8 +123,19 @@ export const MetricDetailView: React.FC<MetricDetailViewProps> = ({ item, onBack
   const tickFill    = isDarkMode ? '#94a3b8' : '#64748b';
 
   const geo = useMemo(
-    () => generateZoneData(item.id, selectedZone, activeYear),
-    [item.id, selectedZone, activeYear]
+    () => {
+      const g = generateZoneData(item.id, selectedZone, activeYear);
+      const variation = dateRange === 'ytd' ? 1 : dateRange === 'q4' ? 0.25 : dateRange === 'q3' ? 0.2 : 0.08;
+      return {
+         ...g,
+         total: Math.round(g.total * variation),
+         target: Math.round(g.target * variation),
+         zones: g.zones.map(z => ({...z, value: Math.round(z.value * variation)})),
+         unions: g.unions.map(u => ({...u, value: Math.round(u.value * variation)})),
+         classification: g.classification.map(c => ({...c, value: Math.round(c.value * variation)}))
+      };
+    },
+    [item.id, selectedZone, activeYear, dateRange]
   );
 
   const TABS: { id: Tab; label: string }[] = [

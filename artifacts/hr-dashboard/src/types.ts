@@ -1,6 +1,6 @@
 export type CategoryTheme = 'orange' | 'green' | 'purple';
 
-export type ViewTab = 'overview' | 'analytics' | 'reports' | 'copilot' | 'flightrisk' | 'scenarios' | 'myview' | 'construction';
+export type ViewTab = 'overview' | 'analytics' | 'reports' | 'copilot' | 'flightrisk' | 'scenarios' | 'myview' | 'construction' | 'team';
 export type ViewMode = 'global' | 'team';
 
 export interface DashboardItem {

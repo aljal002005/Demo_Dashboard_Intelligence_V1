@@ -14,6 +14,7 @@ interface DetailViewProps {
   item: DashboardItem;
   onBack: () => void;
   isDarkMode?: boolean;
+  dateRange?: string;
 }
 
 const generateData = (itemId: string, filters: { year: string; zone: string | null; search: string }) => {
@@ -71,13 +72,24 @@ const BreakdownBar = ({ label, value, total, color }: { label: string; value: nu
   </div>
 );
 
-export const DetailView: React.FC<DetailViewProps> = ({ item, onBack, isDarkMode }) => {
+export const DetailView: React.FC<DetailViewProps> = ({ item, onBack, isDarkMode, dateRange = 'ytd' }) => {
   const [activeYear, setActiveYear] = useState('FY 2026');
   const [selectedZone, setSelectedZone] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
-  const data = useMemo(() => generateData(item.id, { year: activeYear, zone: selectedZone, search: searchTerm }), [item.id, activeYear, selectedZone, searchTerm]);
+  const data = useMemo(() => {
+    const d = generateData(item.id, { year: activeYear, zone: selectedZone, search: searchTerm });
+    const variation = dateRange === 'ytd' ? 1 : dateRange === 'q4' ? 0.25 : dateRange === 'q3' ? 0.2 : 0.08;
+    return {
+      ...d,
+      total: Math.round(d.total * variation),
+      target: Math.round(d.target * variation),
+      zones: d.zones.map(z => ({...z, value: Math.round(z.value * variation)})),
+      unions: d.unions.map(u => ({...u, value: Math.round(u.value * variation)})),
+      classification: d.classification.map(c => ({...c, value: Math.round(c.value * variation)}))
+    };
+  }, [item.id, activeYear, selectedZone, searchTerm, dateRange]);
 
   const themeColor = item.theme === 'orange' ? '#f97316' : item.theme === 'green' ? '#10b981' : '#8b5cf6';
   const gridStroke = isDarkMode ? '#334155' : '#f1f5f9';

@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import {
   Play, RotateCcw, Download, TrendingUp, TrendingDown,
-  DollarSign, Users, Sparkles, Trash2, Save, CheckCircle2
+  DollarSign, Users, Sparkles, Trash2, Save, CheckCircle2, HelpCircle
 } from 'lucide-react';
 import { SectionGuide } from './SectionGuide';
 import {
@@ -136,19 +136,30 @@ export const ScenarioCanvas: React.FC<{ isDarkMode?: boolean }> = ({ isDarkMode 
   const liveProjection = useMemo(() => computeProjection(levers), [levers]);
   const baseProjection = useMemo(() => computeProjection(BASE_LEVERS), []);
 
+  const [tempScenario, setTempScenario] = useState<{name: string; color: string; data: any[]; projection: any} | null>(null);
+
   const runScenario = () => {
     setRunning(true);
     setTimeout(() => {
-      const name = scenarioName.trim() || `Scenario ${scenarios.length + 1}`;
-      const color = SCENARIO_COLORS[scenarios.length % SCENARIO_COLORS.length];
+      const name = scenarioName.trim() || 'Unsaved Run';
+      const color = '#0284c7'; // distinctive blue for unsaved
       const data = buildForecastData(levers, name);
       const projection = computeProjection(levers);
-      setScenarios(prev => [...prev, { name, color, data, levers: JSON.parse(JSON.stringify(levers)), projection }]);
+      setTempScenario({ name, color, data, projection });
       setRunning(false);
-      setScenarioName('');
-      setSavedFeedback(true);
-      setTimeout(() => setSavedFeedback(false), 2000);
     }, 700);
+  };
+
+  const saveScenario = () => {
+    const name = scenarioName.trim() || `Scenario ${scenarios.length + 1}`;
+    const color = SCENARIO_COLORS[scenarios.length % SCENARIO_COLORS.length];
+    const data = buildForecastData(levers, name);
+    const projection = computeProjection(levers);
+    setScenarios(prev => [...prev, { name, color, data, levers: JSON.parse(JSON.stringify(levers)), projection }]);
+    setScenarioName('');
+    setSavedFeedback(true);
+    setTempScenario(null); // Clear temp run once saved
+    setTimeout(() => setSavedFeedback(false), 2000);
   };
 
   const mergedData = FORECAST_YEARS.map((year, i) => {
@@ -160,6 +171,13 @@ export const ScenarioCanvas: React.FC<{ isDarkMode?: boolean }> = ({ isDarkMode 
         pt[s.name] = s.data[i]?.[`${s.name}_attrition`];
       }
     });
+    if (tempScenario) {
+      if (activeMetric === 'headcount') {
+        pt[tempScenario.name] = tempScenario.data[i]?.[tempScenario.name];
+      } else {
+        pt[tempScenario.name] = tempScenario.data[i]?.[`${tempScenario.name}_attrition`];
+      }
+    }
     return pt;
   });
 
@@ -183,25 +201,44 @@ export const ScenarioCanvas: React.FC<{ isDarkMode?: boolean }> = ({ isDarkMode 
         <div className="space-y-4">
           {/* Live impact preview */}
           <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm p-4">
-            <p className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400 mb-3">Live Impact Estimate</p>
-            <div className="grid grid-cols-3 gap-3">
-              <div className="text-center">
-                <p className={`text-xl font-extrabold ${headcountDelta > 0 ? 'text-emerald-600 dark:text-emerald-400' : headcountDelta < 0 ? 'text-rose-500' : 'text-slate-500'}`}>
-                  {headcountDelta >= 0 ? '+' : ''}{headcountDelta.toLocaleString()}
-                </p>
-                <p className="text-[10px] text-slate-400 font-semibold mt-0.5">Headcount</p>
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <div>
+                  <h3 className="text-base font-extrabold text-slate-800 dark:text-white">Live Impact Estimate</h3>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mt-0.5">Real-time Projection</p>
+                </div>
+                <div className="relative group cursor-help ml-2 mt-1">
+                  <HelpCircle size={16} className="text-slate-400 hover:text-blue-500 transition-colors" />
+                  <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-72 p-3 bg-slate-800 dark:bg-slate-700 text-white rounded-xl shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 text-[10px] space-y-2 pointer-events-none">
+                    <p><span className="font-bold text-blue-300">Headcount:</span> Current Base + (Hiring Rate Change × 120 roles/pct) - (Turnover Impact × Base).</p>
+                    <p><span className="font-bold text-blue-300">Attrition Δ:</span> Estimated turnover reduction from comp/engagement programs.</p>
+                    <p><span className="font-bold text-blue-300">Added Cost:</span> Includes direct salary changes + avg recruiting/onboarding costs per hire.</p>
+                    <div className="absolute left-1/2 -bottom-1 -translate-x-1/2 border-4 border-transparent border-t-slate-800 dark:border-t-slate-700" />
+                  </div>
+                </div>
               </div>
-              <div className="text-center">
-                <p className={`text-xl font-extrabold ${attritionDelta < 0 ? 'text-emerald-600 dark:text-emerald-400' : attritionDelta > 0 ? 'text-rose-500' : 'text-slate-500'}`}>
-                  {attritionDelta >= 0 ? '+' : ''}{attritionDelta.toFixed(1)}%
+            </div>
+
+            <div className="flex items-center justify-between rounded-xl bg-slate-50 dark:bg-slate-900/50 p-3 border border-slate-100 dark:border-slate-700 mb-4 divide-x divide-slate-200 dark:divide-slate-700">
+              <div className="flex-1 text-center px-1">
+                <p className={`text-lg font-extrabold ${liveProjection.headcount > baseProjection.headcount ? 'text-emerald-500' : 'text-rose-500'}`}>
+                  {liveProjection.headcount > baseProjection.headcount ? '+' : ''}{Math.round(liveProjection.headcount - baseProjection.headcount).toLocaleString()}
                 </p>
-                <p className="text-[10px] text-slate-400 font-semibold mt-0.5">Attrition Δ</p>
+                <p className="text-[10px] text-slate-500 font-semibold mt-0.5 uppercase tracking-widest">Headcount</p>
               </div>
-              <div className="text-center">
-                <p className="text-xl font-extrabold text-amber-600 dark:text-amber-400">
-                  +${liveProjection.additionalCost}M
+
+              <div className="flex-1 text-center px-1">
+                <p className={`text-lg font-extrabold ${liveProjection.attritionRate < baseProjection.attritionRate ? 'text-emerald-500' : 'text-rose-500'}`}>
+                  {liveProjection.attritionRate > baseProjection.attritionRate ? '+' : ''}{(liveProjection.attritionRate - baseProjection.attritionRate).toFixed(1)}%
                 </p>
-                <p className="text-[10px] text-slate-400 font-semibold mt-0.5">Added Cost</p>
+                <p className="text-[10px] text-slate-500 font-semibold mt-0.5 uppercase tracking-widest">Attrition</p>
+              </div>
+
+              <div className="flex-1 text-center px-1">
+                <p className="text-lg font-extrabold text-amber-500">
+                  +${(liveProjection.additionalCost).toFixed(1)}M
+                </p>
+                <p className="text-[10px] text-slate-500 font-semibold mt-0.5 uppercase tracking-widest">Added Cost</p>
               </div>
             </div>
           </div>
@@ -265,19 +302,30 @@ export const ScenarioCanvas: React.FC<{ isDarkMode?: boolean }> = ({ isDarkMode 
                 onChange={e => setScenarioName(e.target.value)}
                 className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-xs text-slate-700 dark:text-slate-300 placeholder-slate-400 outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-800 transition-all"
               />
-              <button
-                onClick={runScenario}
-                disabled={running}
-                className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-[#002f56] text-white text-sm font-extrabold hover:bg-[#003f73] disabled:opacity-60 transition-all shadow-md shadow-blue-900/20"
-              >
-                {running ? (
-                  <><Sparkles size={14} className="animate-spin" /> Running...</>
-                ) : savedFeedback ? (
-                  <><CheckCircle2 size={14} /> Saved!</>
-                ) : (
-                  <><Save size={14} /> Save Scenario</>
-                )}
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={runScenario}
+                  disabled={running}
+                  className="w-1/2 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-400 text-sm font-extrabold hover:bg-blue-200 dark:hover:bg-blue-900/60 disabled:opacity-60 transition-all shadow-sm"
+                >
+                  {running ? (
+                    <><Sparkles size={14} className="animate-spin" /> Running...</>
+                  ) : (
+                    <><Play size={14} /> Run</>
+                  )}
+                </button>
+                <button
+                  onClick={saveScenario}
+                  disabled={running}
+                  className="w-1/2 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-[#002f56] text-white text-sm font-extrabold hover:bg-[#003f73] disabled:opacity-60 transition-all shadow-md shadow-blue-900/20"
+                >
+                  {savedFeedback ? (
+                    <><CheckCircle2 size={14} /> Saved!</>
+                  ) : (
+                    <><Save size={14} /> Save</>
+                  )}
+                </button>
+              </div>
             </div>
           </div>
 
@@ -336,12 +384,12 @@ export const ScenarioCanvas: React.FC<{ isDarkMode?: boolean }> = ({ isDarkMode 
               </div>
             </div>
 
-            {scenarios.length === 0 ? (
+            {scenarios.length === 0 && !tempScenario ? (
               <div className="h-72 flex flex-col items-center justify-center text-slate-400">
                 <div className="w-16 h-16 rounded-2xl bg-slate-100 dark:bg-slate-700 flex items-center justify-center mb-4">
                   <Play size={24} className="text-slate-400 ml-1" />
                 </div>
-                <p className="font-bold text-slate-500 dark:text-slate-400">Adjust levers and save a scenario</p>
+                <p className="font-bold text-slate-500 dark:text-slate-400">Run or save a scenario to view your projection</p>
                 <p className="text-sm mt-1 text-slate-400">Projections will appear here for comparison</p>
               </div>
             ) : (
@@ -369,6 +417,17 @@ export const ScenarioCanvas: React.FC<{ isDarkMode?: boolean }> = ({ isDarkMode 
                         activeDot={{ r: 7 }}
                       />
                     ))}
+                    {tempScenario && (
+                      <Line
+                        type="monotone"
+                        dataKey={tempScenario.name}
+                        stroke={tempScenario.color}
+                        strokeWidth={2.5}
+                        strokeDasharray="4 4"
+                        dot={{ fill: tempScenario.color, r: 5, strokeWidth: 2, stroke: 'white' }}
+                        activeDot={{ r: 7 }}
+                      />
+                    )}
                   </LineChart>
                 </ResponsiveContainer>
               </div>

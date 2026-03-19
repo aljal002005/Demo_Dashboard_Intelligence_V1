@@ -34,7 +34,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, onTabChange, onLog
   const coreNav = [
     { id: 'overview', label: 'Overview', icon: LayoutGrid },
     { id: 'analytics', label: 'Executive View', icon: PieChart },
-    { id: 'reports', label: 'Reports', icon: FileText },
+    { id: 'reports', label: 'Agentic Reports', icon: FileText },
   ];
 
   const aiNav = [
@@ -44,7 +44,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, onTabChange, onLog
   ];
 
   const secondaryNav = [
-    { id: 'myview', label: 'My View', icon: LayoutDashboard, active: true },
+    { id: 'myview', label: 'My View', icon: LayoutDashboard, active: false },
     { id: 'team', label: 'My Team', icon: Users, active: false },
     { id: 'projects', label: 'Projects', icon: Briefcase, active: false },
   ];
@@ -106,7 +106,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, onTabChange, onLog
         {!collapsed && (
           <div className="min-w-0">
             <p className="text-sm font-extrabold text-[#002f56] dark:text-white truncate leading-tight">HR Intelligence Hub</p>
-            <p className="text-[10px] text-slate-400 dark:text-slate-500 truncate">HSS Health Network</p>
           </div>
         )}
       </div>

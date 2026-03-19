@@ -221,7 +221,7 @@ export const REPORT_DATA: Record<string, {
   },
 
   headcount: {
-    summary: 'Total headcount for HSS Health Network stands at 112,500 FTE as of the reporting period, a 2.1% increase year-over-year. Growth is concentrated in Clinical Operations (+3.2%) driven by expansion of acute care capacity in Calgary. Administrative functions show a planned reduction (-0.8%) aligned with the operational efficiency strategy. Casual and temporary staff represent 15% of total headcount, up from 12% last year.',
+    summary: 'Total headcount stands at 112,500 FTE as of the reporting period, a 2.1% increase year-over-year. Growth is concentrated in Clinical Operations (+3.2%) driven by expansion of acute care capacity in Calgary. Administrative functions show a planned reduction (-0.8%) aligned with the operational efficiency strategy. Casual and temporary staff represent 15% of total headcount, up from 12% last year.',
     keyFactors: [
       'Opportunity: Clinical headcount grew 3.2% YoY, keeping pace with patient volume growth of 2.8%.',
       'Risk: Casual/temporary staff ratio increased to 15%, increasing benefit costs and reducing continuity of care.',

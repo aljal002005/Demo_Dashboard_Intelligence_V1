@@ -7,7 +7,7 @@ import { ArrowLeft, Download, TrendingUp, TrendingDown, Sparkles, AlertCircle, A
 import { DashboardItem } from '../types';
 import { ORG_NAME } from '../constants';
 
-interface Props { item: DashboardItem; onBack: () => void; isDarkMode?: boolean; }
+interface Props { item: DashboardItem; onBack: () => void; isDarkMode?: boolean; dateRange?: string; }
 
 const CONFIGS: Record<string, any> = {
   overtime: {
@@ -69,7 +69,7 @@ const CustomTooltip = ({ active, payload, label, color }: any) => {
   );
 };
 
-export const AdvancedAnalyticsView: React.FC<Props> = ({ item, onBack, isDarkMode }) => {
+export const AdvancedAnalyticsView: React.FC<Props> = ({ item, onBack, isDarkMode, dateRange = 'ytd' }) => {
   const cfg = CONFIGS[item.id] ?? {
     title: `${item.title} Analytics`,
     kpis: [
@@ -95,6 +95,34 @@ export const AdvancedAnalyticsView: React.FC<Props> = ({ item, onBack, isDarkMod
   const gridColor = isDarkMode ? '#334155' : '#f1f5f9';
   const tickColor = isDarkMode ? '#94a3b8' : '#64748b';
 
+  const variation = dateRange === 'ytd' ? 1 : dateRange === 'q4' ? 0.96 : dateRange === 'q3' ? 0.94 : 0.99;
+  
+  const filteredTrend = dateRange === 'ytd' ? cfg.trendData : Array.from({length: 8}, (_, i) => {
+    const baseVal = cfg.trendData[0]?.value ?? 0;
+    const baseTgt = cfg.trendData[0]?.target ?? 0;
+    const prefix = dateRange === 'q4' ? 'Q4 W' : dateRange === 'q3' ? 'Q3 W' : 'W';
+    let val = typeof baseVal === 'number' ? baseVal * variation * (0.9 + Math.random() * 0.2) : baseVal;
+    let tgt = typeof baseTgt === 'number' ? baseTgt * variation * (0.95 + Math.random() * 0.1) : baseTgt;
+    return {
+      month: `${prefix}${i + 1}`,
+      value: val,
+      target: tgt
+    };
+  });
+
+  const mappedKpis = cfg.kpis.map((k: any) => {
+    let numStr = k.value;
+    const match = numStr.match(/^([$]?[\d.,]+)(.*)$/);
+    if (match) {
+      let num = parseFloat(match[1].replace(/[$,]/g, ''));
+      if (!isNaN(num)) {
+        num *= variation;
+        numStr = (match[1].startsWith('$') ? '$' : '') + (num % 1 === 0 ? num.toString() : num.toFixed(1)) + match[2];
+      }
+    }
+    return { ...k, value: numStr };
+  });
+
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-900 transition-colors animate-fade-in">
       {/* Header */}
@@ -106,7 +134,7 @@ export const AdvancedAnalyticsView: React.FC<Props> = ({ item, onBack, isDarkMod
             </button>
             <div>
               <h1 className="text-xl font-extrabold text-slate-900 dark:text-white">{cfg.title}</h1>
-              <p className="text-xs text-slate-400 mt-0.5">{ORG_NAME} · FY 2026 Executive View</p>
+              <p className="text-xs text-slate-400 mt-0.5">{ORG_NAME} · FY 2026 {dateRange.toUpperCase()} View</p>
             </div>
           </div>
           <button className="flex items-center gap-2 px-4 py-2 bg-[#002f56] text-white rounded-xl text-sm font-bold hover:bg-[#003f73] transition-all shadow-sm">
@@ -118,7 +146,7 @@ export const AdvancedAnalyticsView: React.FC<Props> = ({ item, onBack, isDarkMod
       <div className="max-w-6xl mx-auto px-6 py-8">
         {/* KPI row with large numbers */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8 stagger">
-          {cfg.kpis.map((kpi: any, i: number) => (
+          {mappedKpis.map((kpi: any, i: number) => (
             <div key={i} className="bg-white dark:bg-slate-800 rounded-2xl p-6 border border-slate-200 dark:border-slate-700 shadow-sm animate-fade-in">
               <div className={`flex items-center gap-1.5 text-xs font-bold mb-3 ${kpi.negative ? 'text-rose-500' : 'text-emerald-500'}`}>
                 {kpi.negative ? <TrendingDown size={14} /> : <TrendingUp size={14} />}
@@ -132,10 +160,10 @@ export const AdvancedAnalyticsView: React.FC<Props> = ({ item, onBack, isDarkMod
 
         {/* Trend chart */}
         <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 border border-slate-200 dark:border-slate-700 shadow-sm mb-6">
-          <h3 className="text-base font-extrabold text-slate-800 dark:text-white mb-6">8-Month Trend vs Target</h3>
+          <h3 className="text-base font-extrabold text-slate-800 dark:text-white mb-6">Trend vs Target</h3>
           <div className="h-72">
             <ResponsiveContainer width="100%" height="100%">
-              <ComposedChart data={cfg.trendData}>
+              <ComposedChart data={filteredTrend}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={gridColor} />
                 <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fill: tickColor, fontSize: 11 }} />
                 <YAxis axisLine={false} tickLine={false} tick={{ fill: tickColor, fontSize: 11 }} />

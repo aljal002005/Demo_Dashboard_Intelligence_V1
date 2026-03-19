@@ -65,7 +65,6 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin, isDarkMode, toggl
         <div className="w-full max-w-md animate-slide-up">
           <div className="text-center mb-8">
             <h1 className="text-3xl font-extrabold tracking-tight">Welcome back</h1>
-            <p className="text-blue-300 mt-2 text-sm">Sign in to access your analytics dashboard</p>
           </div>
 
           <form onSubmit={handleSubmit} className="bg-white/10 backdrop-blur-md rounded-2xl p-8 border border-white/10 shadow-2xl space-y-5">

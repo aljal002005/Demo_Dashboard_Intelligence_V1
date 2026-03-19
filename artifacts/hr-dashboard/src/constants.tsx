@@ -15,4 +15,4 @@ export const DASHBOARD_ITEMS: DashboardItem[] = [
   { id: 'learning', title: 'Learning & Development', theme: 'purple', iconName: 'BookOpen' },
 ];
 
-export const ORG_NAME = 'HSS Health Network';
+export const ORG_NAME = 'People Analytics';

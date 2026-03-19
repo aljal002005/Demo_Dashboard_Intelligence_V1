@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Clock, Activity, CalendarCheck, ShieldAlert, Users, UserPlus, TrendingDown,
   Heart, Timer, BadgeCheck, GitFork, BookOpen, ChevronRight, TrendingUp
@@ -67,14 +67,45 @@ const THEME_STYLES = {
 interface DashboardTileProps {
   item: DashboardItem;
   onClick: (item: DashboardItem) => void;
+  dateRange?: string;
 }
 
-export const DashboardTile: React.FC<DashboardTileProps> = ({ item, onClick }) => {
+export const DashboardTile: React.FC<DashboardTileProps> = ({ item, onClick, dateRange = 'ytd' }) => {
   const [pressing, setPressing] = useState(false);
   const Icon = ICON_MAP[item.iconName] ?? Clock;
   const style = THEME_STYLES[item.theme];
   const metric = MOCK_METRICS[item.id];
-  const sparkline = SPARKLINE_HEIGHTS[item.id] ?? [40, 50, 45, 60, 55, 65, 70, 68, 75, 80];
+  
+  const variation = dateRange === 'ytd' ? 1 : dateRange === 'q4' ? 0.95 : dateRange === 'q3' ? 0.91 : 0.98;
+  const isCumulative = item.id === 'overtime' || item.id === 'sick-leave' || item.id === 'vacancies' || item.id === 'safety';
+  const multiplier = isCumulative ? (dateRange === 'ytd' ? 1 : dateRange === 'q4' ? 0.25 : dateRange === 'q3' ? 0.23 : 0.08) : variation;
+  
+  const rawSparkline = SPARKLINE_HEIGHTS[item.id] ?? [40, 50, 45, 60, 55, 65, 70, 68, 75, 80];
+  const sparkline = useMemo(() => {
+    if (dateRange === 'ytd') return rawSparkline.map(h => h * multiplier);
+    return Array.from({length: 10}, (_, i) => {
+      const avg = rawSparkline.reduce((a,b)=>a+b,0)/10;
+      return avg * multiplier * (0.85 + Math.sin(i * 1.5) * 0.15 + Math.random() * 0.1);
+    });
+  }, [dateRange, item.id, multiplier]);
+
+  const modifyStringVal = (str: string, mult: number) => {
+    const match = str.match(/^([\d.,]+)(.*)$/);
+    if (!match) return str;
+    let num = parseFloat(match[1].replace(/,/g, ''));
+    if (isNaN(num)) return str;
+    num = num * mult;
+    let formatted = num.toString();
+    if (str.includes(',')) formatted = Math.round(num).toLocaleString();
+    else if (match[1].includes('.') || num < 10) formatted = num.toFixed(1);
+    else formatted = Math.round(num).toString();
+    return formatted + match[2];
+  };
+
+  const displayMetric = metric ? {
+    ...metric,
+    value: modifyStringVal(metric.value, multiplier),
+  } : undefined;
 
   const handleClick = () => {
     setPressing(true);
@@ -101,9 +132,9 @@ export const DashboardTile: React.FC<DashboardTileProps> = ({ item, onClick }) =
         <div className={`p-2.5 rounded-xl transition-all duration-200 ${style.iconBg} ${style.accent}`}>
           <Icon size={18} />
         </div>
-        {metric && (
-          <span className={`text-[10px] font-extrabold px-2 py-1 rounded-lg border ${style.badge} ${metric.positive ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
-            {metric.trend}
+        {displayMetric && (
+          <span className={`text-[10px] font-extrabold px-2 py-1 rounded-lg border ${style.badge} ${displayMetric.positive ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
+            {displayMetric.trend}
           </span>
         )}
       </div>
@@ -114,9 +145,9 @@ export const DashboardTile: React.FC<DashboardTileProps> = ({ item, onClick }) =
       </h3>
 
       {/* Main metric */}
-      {metric && (
+      {displayMetric && (
         <p className="text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight mb-3">
-          {metric.value}
+          {displayMetric.value}
         </p>
       )}
 
@@ -139,7 +170,7 @@ export const DashboardTile: React.FC<DashboardTileProps> = ({ item, onClick }) =
 
       {/* Footer */}
       <div className="flex items-center justify-between mt-3">
-        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">FY 2026 YTD</span>
+        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{dateRange === 'ytd' ? 'FY 2026 YTD' : dateRange.toUpperCase()}</span>
         <ChevronRight size={14} className={`${style.accent} opacity-0 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all`} />
       </div>
     </button>

@@ -76,8 +76,12 @@ export const AICopilotView: React.FC<{ isDarkMode?: boolean }> = ({ isDarkMode }
     setInput('');
     setLoading(true);
     setTimeout(() => {
-      const intent = matchIntent(text);
-      const resp = RESPONSES[intent];
+      const intent = matchIntent(text) || 'unknown';
+      const defaultResp: Omit<Message, 'id' | 'role' | 'timestamp'> = {
+        content: `**I don't have that information right now.**\n\nI am currently optimized to answer questions about **overtime**, **attrition**, and **headcount** metrics. Please ask me about these topics, or use one of the suggestions below.`,
+        suggestions: ['Show me overtime trends', 'What is our attrition rate?']
+      };
+      const resp = RESPONSES[intent] || defaultResp;
       const aiMsg: Message = { id: (Date.now() + 1).toString(), role: 'assistant', timestamp: new Date(), ...resp };
       setMessages(prev => [...prev, aiMsg]);
       setLoading(false);
@@ -90,7 +94,8 @@ export const AICopilotView: React.FC<{ isDarkMode?: boolean }> = ({ isDarkMode }
       if (line.startsWith('**') && line.endsWith('**')) return <p key={i} className="font-extrabold text-slate-800 dark:text-white mt-3 mb-1">{line.replace(/\*\*/g, '')}</p>;
       if (line.startsWith('• ')) return <li key={i} className="ml-4 text-slate-600 dark:text-slate-400 text-sm">{line.slice(2)}</li>;
       if (!line) return <div key={i} className="h-1" />;
-      return <p key={i} className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed" dangerouslySetInnerHTML={{ __html: line.replace(/\*\*(.+?)\*\*/g, '<strong class="text-slate-800 dark:text-white">$1</strong>') }} />;
+      const parts = line.split(/\*\*(.+?)\*\*/g);
+      return <p key={i} className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">{parts.map((part, j) => j % 2 === 1 ? <strong key={j} className="text-slate-800 dark:text-white">{part}</strong> : part)}</p>;
     });
 
   return (

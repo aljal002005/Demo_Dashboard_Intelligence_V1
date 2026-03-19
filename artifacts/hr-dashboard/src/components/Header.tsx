@@ -26,6 +26,8 @@ const TAB_LABELS: Record<ViewTab, string> = {
   copilot: 'AI Copilot',
   flightrisk: 'Flight Risk',
   scenarios: 'Scenario Planner',
+  myview: 'My View',
+  team: 'My Team',
   construction: 'Coming Soon',
 };
 

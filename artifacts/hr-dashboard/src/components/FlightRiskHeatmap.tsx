@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import {
-  AlertTriangle, ChevronRight, Info, Download,
+  AlertTriangle, ChevronRight, Download,
   ArrowLeft, Activity, TrendingDown, Users, Zap
 } from 'lucide-react';
 import { SectionGuide } from './SectionGuide';
@@ -105,7 +105,7 @@ export const FlightRiskHeatmap: React.FC<FlightRiskHeatmapProps> = ({ isDarkMode
     score: RISK_MATRIX[selectedDept]?.[f] ?? 30,
   }));
 
-  const depts = view === 'heatmap' ? DEPARTMENTS : DEPARTMENTS;
+
 
   return (
     <div className="max-w-7xl mx-auto px-6 py-8 animate-fade-in">

@@ -18,7 +18,7 @@ export const MorningBriefing: React.FC<MorningBriefingProps> = ({ username = 'Ad
   }, []);
 
   return (
-    <div className="mb-8 rounded-2xl bg-gradient-to-r from-[#001e38] via-[#002f56] to-[#003f73] text-white shadow-xl border border-blue-500/10 overflow-hidden animate-slide-up">
+    <div className="mb-8 rounded-2xl bg-gradient-to-r from-[#001e38] via-[#002f56] to-[#003f73] text-white shadow-xl border border-blue-500/10 overflow-hidden animate-slide-up relative">
       {/* Background decor */}
       <div className="absolute top-0 right-0 w-64 h-64 bg-blue-400/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none" />
 
