@@ -3,16 +3,9 @@ import { ArrowLeft, Clock, ArrowUp, ArrowRight, ArrowDown } from 'lucide-react';
 import { ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { DashboardItem } from '../types';
 import { ORG_NAME } from '../constants';
+import { getMetricTimeSeries } from '../data/historicalDataGenerator';
 
 interface OvertimeViewProps { item: DashboardItem; onBack: () => void; isDarkMode?: boolean; dateRange?: string; }
-
-const TREND = [
-  { month: 'Apr 25', val: 2.4, trend: 'flat' }, { month: 'May 25', val: 2.7, trend: 'up' },
-  { month: 'Jun 25', val: 2.8, trend: 'up' }, { month: 'Jul 25', val: 3.2, trend: 'up' },
-  { month: 'Aug 25', val: 3.2, trend: 'flat' }, { month: 'Sep 25', val: 2.9, trend: 'down' },
-  { month: 'Oct 25', val: 2.8, trend: 'down' }, { month: 'Nov 25', val: 2.8, trend: 'flat' },
-  { month: 'Dec 25', val: 3.1, trend: 'up' },
-];
 
 const UNION_DATA = [
   { name: 'UNA', ot: 1250375, rate: 5.5 }, { name: 'AUPE AUX', ot: 474549, rate: 4.5 },
@@ -47,16 +40,22 @@ export const OvertimeView: React.FC<OvertimeViewProps> = ({ item, onBack, isDark
   const gridColor = isDarkMode ? '#334155' : '#f1f5f9';
   const tickColor = isDarkMode ? '#94a3b8' : '#64748b';
 
+  const rawSeries = getMetricTimeSeries('overtime');
   const variation = dateRange === 'ytd' ? 1 : dateRange === 'q4' ? 0.25 : dateRange === 'q3' ? 0.25 : 0.08;
-  const filteredTrend = dateRange === 'ytd' ? TREND : Array.from({length: 9}, (_, i) => {
-    const prefix = dateRange === 'q4' ? 'Q4 W' : dateRange === 'q3' ? 'Q3 W' : 'W';
-    const val = 2.5 + Math.random() * 1.5;
-    return {
-      month: `${prefix}${i + 1}`,
-      val: parseFloat(val.toFixed(1)),
-      trend: val > 3.2 ? 'down' : val < 2.8 ? 'up' : 'flat'
-    };
+  
+  // Decide how much data to show based on standard drill-downs or use recent history
+  const historyLength = dateRange === 'ytd' ? 12 : dateRange === 'last month' ? 2 : 9;
+  const recentSeries = rawSeries.slice(-historyLength);
+
+  const filteredTrend = recentSeries.map((p, i) => {
+    let trend: 'up' | 'down' | 'flat' = 'flat';
+    if (i > 0) {
+      if (p.actual > recentSeries[i-1].actual + 0.1) trend = 'up';
+      else if (p.actual < recentSeries[i-1].actual - 0.1) trend = 'down';
+    }
+    return { month: p.period.toUpperCase(), val: p.actual, trend };
   });
+
   const filteredUnion = UNION_DATA.map(u => ({ ...u, ot: u.ot * variation }));
   const filteredZones = ZONES.map(z => ({ ...z, value: z.value * variation }));
   const multiplierText = (2.08 * variation).toFixed(2);
@@ -89,7 +88,7 @@ export const OvertimeView: React.FC<OvertimeViewProps> = ({ item, onBack, isDark
               <Clock size={28} strokeWidth={2} />
             </div>
             <div>
-              <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest mb-1">FY 2026 YTD</p>
+              <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest mb-1">FY 2026 {dateRange === 'last month' ? 'LAST MONTH' : dateRange.toUpperCase()}</p>
               <div className="flex items-baseline gap-2">
                 <span className="text-3xl font-extrabold text-[#002f56] dark:text-white">{multiplierText}M</span>
                 <span className="text-sm text-slate-500">hrs</span>

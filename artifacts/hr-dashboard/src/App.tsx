@@ -95,9 +95,17 @@ const App: React.FC = () => {
 
   const renderMainContent = () => {
     if (selectedItem) {
-      if (selectedItem.id === 'overtime') return <OvertimeView item={selectedItem} onBack={handleBack} isDarkMode={isDarkMode} dateRange={dateRange} />;
-      if (currentTab === 'analytics') return <AdvancedAnalyticsView item={selectedItem} onBack={handleBack} isDarkMode={isDarkMode} dateRange={dateRange} />;
-      if (currentTab === 'reports') return <MetricDetailView item={selectedItem} onBack={handleBack} isDarkMode={isDarkMode} dateRange={dateRange} />;
+      if (currentTab === 'analytics') {
+        return <AdvancedAnalyticsView item={selectedItem} onBack={handleBack} isDarkMode={isDarkMode} dateRange={dateRange} />;
+      }
+      if (currentTab === 'reports') {
+        return <MetricDetailView item={selectedItem} onBack={handleBack} isDarkMode={isDarkMode} dateRange={dateRange} />;
+      }
+      
+      // Default (Overview & other tabs)
+      if (selectedItem.id === 'overtime') {
+        return <OvertimeView item={selectedItem} onBack={handleBack} isDarkMode={isDarkMode} dateRange={dateRange} />;
+      }
       return <DetailView item={selectedItem} onBack={handleBack} isDarkMode={isDarkMode} dateRange={dateRange} />;
     }
 

@@ -277,7 +277,7 @@ export const MetricDetailView: React.FC<MetricDetailViewProps> = ({ item, onBack
                 {/* Hero metric */}
                 <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 border border-slate-200 dark:border-slate-700 shadow-sm flex items-end justify-between gap-6">
                   <div>
-                    <p className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400 mb-2">Total YTD Volume</p>
+                    <p className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400 mb-2">Total {dateRange === 'last month' ? 'LAST MONTH' : dateRange.toUpperCase()} Volume</p>
                     <p className="text-5xl font-extrabold text-slate-900 dark:text-white tracking-tight">{geo.total.toLocaleString()}</p>
                     <div className="flex items-center gap-3 mt-3">
                       <span className="px-2 py-1 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 text-xs font-bold rounded-lg">+4.2% vs Last Year</span>
@@ -405,8 +405,8 @@ export const MetricDetailView: React.FC<MetricDetailViewProps> = ({ item, onBack
                 {report.tableData && (
                   <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
                     <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-700">
-                      <h3 className="text-sm font-extrabold text-slate-800 dark:text-white">Year-over-Year Comparison</h3>
-                      <p className="text-xs text-slate-400 mt-0.5">FY 2026 YTD vs FY 2025 YTD by segment</p>
+                      <h3 className="text-[14px] font-extrabold text-[#002f56] dark:text-white tracking-tight">Year-over-Year Comparison</h3>
+                      <p className="text-xs text-slate-400 mt-0.5">FY 2026 {dateRange === 'last month' ? 'LAST MONTH' : dateRange.toUpperCase()} vs FY 2025 {dateRange === 'last month' ? 'LAST MONTH' : dateRange.toUpperCase()} by segment</p>
                     </div>
                     <div className="overflow-x-auto">
                       <table className="w-full">
@@ -526,9 +526,9 @@ export const MetricDetailView: React.FC<MetricDetailViewProps> = ({ item, onBack
                 <div className="bg-gradient-to-r from-[#001e38] to-[#002f56] px-8 py-6 text-white">
                   <p className="text-[10px] font-extrabold tracking-widest text-blue-300 uppercase mb-1">{ORG_NAME}</p>
                   <h2 className="text-xl font-extrabold tracking-tight">{item.title}</h2>
-                  <p className="text-blue-200 text-xs mt-1">
-                    Reporting Period: {activeYear} YTD &nbsp;·&nbsp; Generated: {new Date().toLocaleDateString('en-CA', { year: 'numeric', month: 'long', day: 'numeric' })}
-                  </p>
+                  <div className="text-xs font-bold text-slate-400 dark:text-slate-500 max-w-lg">
+                    Reporting Period: {activeYear} {dateRange === 'last month' ? 'Last Month' : dateRange.toUpperCase()} &nbsp;·&nbsp; Generated: {new Date().toLocaleDateString('en-CA', { year: 'numeric', month: 'long', day: 'numeric' })}
+                  </div>
                 </div>
 
                 <div className="px-8 py-7 space-y-8">

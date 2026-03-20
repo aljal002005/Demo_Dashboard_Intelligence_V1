@@ -105,7 +105,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, onTabChange, onLog
         <OrgIcon />
         {!collapsed && (
           <div className="min-w-0">
-            <p className="text-sm font-extrabold text-[#002f56] dark:text-white truncate leading-tight">HR Intelligence Hub</p>
+            <p className="text-sm font-extrabold text-[#002f56] dark:text-white truncate leading-tight">Vantage HR Intelligence</p>
           </div>
         )}
       </div>

@@ -17,33 +17,77 @@ interface DetailViewProps {
   dateRange?: string;
 }
 
+import { HISTORICAL_DATASET } from '../data/historicalDataGenerator';
+
 const generateData = (itemId: string, filters: { year: string; zone: string | null; search: string }) => {
-  let scale = 1000, base = 95, variance = 25;
-  if (filters.zone) scale *= 0.25;
-  if (filters.search) scale *= 0.1;
-  const total = Math.floor(Math.random() * variance * scale) + base * scale;
-  const target = Math.floor(total * 0.95);
+  // Parse FY from filter (e.g., 'FY 2026' -> 2026)
+  const fyYear = parseInt(filters.year.replace('FY ', ''));
+  
+  // FY runs from April of previous year to March of current year
+  // e.g. FY 2026 = 2025-04 to 2026-03
+  const startMonth = `${fyYear - 1}-04`;
+  const endMonth = `${fyYear}-03`;
 
-  const zones = ['Calgary', 'Edmonton', 'Central', 'North', 'South'].map(name => ({
-    name,
-    value: filters.zone && filters.zone !== name ? 0 : Math.floor(total * (filters.zone ? 1 : [0.38, 0.35, 0.12, 0.09, 0.06][['Calgary', 'Edmonton', 'Central', 'North', 'South'].indexOf(name)])),
-  }));
+  // Filter 60-month dataset for this metric and FY window
+  const filteredDataset = HISTORICAL_DATASET.filter(row => {
+    return row.metricId === itemId && 
+           row.dateString >= startMonth && 
+           row.dateString <= endMonth &&
+           (filters.zone ? row.zone === filters.zone : true);
+  });
 
+  // Calculate actuals and targets by Zone
+  const isCount = itemId === 'headcount' || itemId === 'vacancies' || itemId === 'safety';
+  
+  const zoneMap: Record<string, { actual: number; target: number; count: number }> = {};
+  ['Calgary', 'Edmonton', 'Central', 'North', 'South'].forEach(z => zoneMap[z] = { actual: 0, target: 0, count: 0 });
+
+  filteredDataset.forEach(row => {
+    zoneMap[row.zone].actual += row.actual;
+    zoneMap[row.zone].target += row.target;
+    zoneMap[row.zone].count += 1;
+  });
+
+  const zones = Object.entries(zoneMap).map(([name, data]) => {
+    // If we're filtering by zone and this isn't it, show 0 to keep the chart layout
+    if (filters.zone && filters.zone !== name) return { name, value: 0 };
+    if (data.count === 0) return { name, value: 0 };
+    return {
+      name,
+      value: isCount ? Math.round(data.actual) : Number((data.actual / data.count).toFixed(2))
+    };
+  });
+
+  // Calculate overall total
+  let total = 0;
+  let target = 0;
+  if (isCount) {
+    total = zones.reduce((sum, z) => sum + z.value, 0);
+    target = Object.values(zoneMap).reduce((sum, z) => sum + z.target, 0);
+  } else {
+    const activeZones = zones.filter(z => z.value > 0);
+    total = activeZones.length > 0 ? Number((activeZones.reduce((sum, z) => sum + z.value, 0) / activeZones.length).toFixed(1)) : 0;
+    const targetGroups = Object.values(zoneMap).filter(z => z.count > 0);
+    target = targetGroups.length > 0 ? Number((targetGroups.reduce((sum, z) => sum + (z.target/z.count), 0) / targetGroups.length).toFixed(1)) : 0;
+  }
+
+  // Fallback to static distribution for dimensions not in the generated dataset
+  const displayTotal = total > 0 ? total : 100; // avoid NaN in % calc
   const unions = [
-    { name: 'UNA', value: Math.floor(total * 0.32) },
-    { name: 'AUPE GSS', value: Math.floor(total * 0.28) },
-    { name: 'HSAA', value: Math.floor(total * 0.18) },
-    { name: 'AUPE AUX', value: Math.floor(total * 0.15) },
-    { name: 'NUEE', value: Math.floor(total * 0.05) },
-    { name: 'PARA', value: Math.floor(total * 0.02) },
+    { name: 'UNA', value: Math.floor(displayTotal * 0.32) },
+    { name: 'AUPE GSS', value: Math.floor(displayTotal * 0.28) },
+    { name: 'HSAA', value: Math.floor(displayTotal * 0.18) },
+    { name: 'AUPE AUX', value: Math.floor(displayTotal * 0.15) },
+    { name: 'NUEE', value: Math.floor(displayTotal * 0.05) },
+    { name: 'PARA', value: Math.floor(displayTotal * 0.02) },
   ];
 
   const classification = [
-    { name: 'RFT', value: Math.floor(total * 0.45) },
-    { name: 'RPT', value: Math.floor(total * 0.35) },
-    { name: 'CAS', value: Math.floor(total * 0.10) },
-    { name: 'TFT', value: Math.floor(total * 0.05) },
-    { name: 'TPT', value: Math.floor(total * 0.05) },
+    { name: 'RFT', value: Math.floor(displayTotal * 0.45) },
+    { name: 'RPT', value: Math.floor(displayTotal * 0.35) },
+    { name: 'CAS', value: Math.floor(displayTotal * 0.10) },
+    { name: 'TFT', value: Math.floor(displayTotal * 0.05) },
+    { name: 'TPT', value: Math.floor(displayTotal * 0.05) },
   ];
 
   return { total, target, zones, unions, classification };
@@ -115,7 +159,7 @@ export const DetailView: React.FC<DetailViewProps> = ({ item, onBack, isDarkMode
             </button>
             <div>
               <h1 className="text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight">{item.title}</h1>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{ORG_NAME} · {activeYear}</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{ORG_NAME} · {activeYear} {dateRange === 'last month' ? 'Last Month' : dateRange.toUpperCase()}</p>
             </div>
           </div>
           <div className="flex gap-2">
@@ -135,7 +179,7 @@ export const DetailView: React.FC<DetailViewProps> = ({ item, onBack, isDarkMode
         <div className="bg-white dark:bg-slate-800 rounded-3xl p-8 shadow-sm border border-slate-200 dark:border-slate-700 mb-6">
           <div className="flex items-end justify-between gap-6">
             <div>
-              <p className="text-xs font-extrabold uppercase tracking-widest text-slate-400 mb-2">Total YTD Volume</p>
+              <p className="text-xs font-extrabold uppercase tracking-widest text-slate-400 mb-2">Total {dateRange === 'last month' ? 'Last Month' : dateRange.toUpperCase()} Volume</p>
               <p className="text-6xl font-extrabold text-slate-900 dark:text-white tracking-tight">{data.total.toLocaleString()}</p>
               <div className="flex items-center gap-3 mt-3">
                 <span className="px-2 py-1 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 text-xs font-bold rounded-lg">+4.2% vs Last Year</span>

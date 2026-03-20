@@ -8,6 +8,7 @@ export const DASHBOARD_ITEMS: DashboardItem[] = [
   { id: 'headcount', title: 'Total Headcount', theme: 'green', iconName: 'Users' },
   { id: 'vacancies', title: 'Vacancies & Recruitment', theme: 'green', iconName: 'UserPlus' },
   { id: 'attrition', title: 'Attrition Rate', theme: 'green', iconName: 'TrendingDown' },
+  { id: 'retirement', title: 'Retirement Forecast', theme: 'green', iconName: 'TrendingUp' },
   { id: 'engagement', title: 'Employee Engagement', theme: 'green', iconName: 'Heart' },
   { id: 'time-to-fill', title: 'Time to Fill', theme: 'purple', iconName: 'Timer' },
   { id: 'credentialing', title: 'Credentialing Status', theme: 'purple', iconName: 'BadgeCheck' },
@@ -15,4 +16,4 @@ export const DASHBOARD_ITEMS: DashboardItem[] = [
   { id: 'learning', title: 'Learning & Development', theme: 'purple', iconName: 'BookOpen' },
 ];
 
-export const ORG_NAME = 'People Analytics';
+export const ORG_NAME = 'Vantage HR';

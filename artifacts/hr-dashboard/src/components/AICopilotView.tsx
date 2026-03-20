@@ -1,91 +1,170 @@
 import React, { useState, useRef, useEffect } from 'react';
 import {
   Sparkles, Send, Bot, User, TrendingUp, TrendingDown, AlertTriangle,
-  ChevronRight, BarChart3, Clock, Users, Loader2, Copy, ThumbsUp, ThumbsDown, Lightbulb
+  ChevronRight, BarChart3, Clock, Users, Loader2, Copy, ThumbsUp, ThumbsDown,
+  Lightbulb, Settings, X, Key, Wifi, WifiOff
 } from 'lucide-react';
 import { SectionGuide } from './SectionGuide';
 import { BarChart, Bar, ResponsiveContainer, XAxis, YAxis, Tooltip, LineChart, Line, CartesianGrid } from 'recharts';
+import {
+  askGemini, getApiKey, setApiKey, clearApiKey,
+  type GeminiResponse, type GeminiKpi, type GeminiChart
+} from '../services/geminiService';
 
 interface Message {
   id: string;
   role: 'user' | 'assistant';
   content: string;
-  chart?: { type: 'bar' | 'line'; data: any[]; dataKey: string; nameKey: string; title: string; color?: string };
-  kpis?: { label: string; value: string; change: string; positive: boolean }[];
+  chart?: GeminiChart;
+  kpis?: GeminiKpi[];
   suggestions?: string[];
   timestamp: Date;
+  isLive?: boolean; // true = from Gemini API, false = fallback
 }
 
-const RESPONSES: Record<string, Omit<Message, 'id' | 'role' | 'timestamp'>> = {
-  overtime: {
-    content: `**Overtime Analysis — Q4 2025 vs Q3 2025**\n\nOvertime hours spiked **+12.4%** quarter-over-quarter, primarily driven by the **North Zone Emergency** department. Critical Care and Emergency departments account for **65%** of total overtime spend.\n\n**Root Causes:**\n• Nursing vacancy backfill — 142 open FTE positions\n• Flu season surge in Emergency (+25%)\n• Mandatory overtime in ICU units\n\n**Recommendation:** Immediate supplemental staffing in North Zone Emergency and ICU. Consider locum contracts for the next 8 weeks.`,
-    kpis: [
-      { label: 'Total OT Hours', value: '2.08M', change: '+12.4%', positive: false },
-      { label: 'OT Cost YTD', value: '$12.4M', change: '+8.2%', positive: false },
-      { label: 'High-Risk Units', value: '14', change: '+3', positive: false },
-      { label: 'Budget Used', value: '114%', change: 'Over', positive: false },
-    ],
-    chart: { type: 'bar', data: [{ zone: 'North', value: 520 }, { zone: 'Edmonton', value: 380 }, { zone: 'Calgary', value: 340 }, { zone: 'Central', value: 210 }, { zone: 'South', value: 130 }], dataKey: 'value', nameKey: 'zone', title: 'OT Hours by Zone (000s)', color: '#f97316' },
-    suggestions: ['What are the staffing gaps by unit?', "Compare to last year's overtime", 'Forecast overtime for next quarter'],
-  },
-  attrition: {
-    content: `**Attrition Analysis — FY 2026 YTD**\n\nOverall attrition is tracking at **8.7%**, a slight improvement from 9.1% last year. However, **voluntary attrition in clinical leadership** roles is a growing concern at 15.2%.\n\n**Key Drivers:**\n• Compensation gaps vs market in clinical lead roles (-12%)\n• Limited career progression pathways\n• Burnout from sustained overtime demands\n\n**Immediate Action Required:** Retention interviews for all clinical leads with >3 years tenure.`,
-    kpis: [
-      { label: 'Overall Attrition', value: '8.7%', change: '-0.4%', positive: true },
-      { label: 'Clinical Lead OT', value: '15.2%', change: '+2.1%', positive: false },
-      { label: 'Retention Rate', value: '91.3%', change: '+0.4%', positive: true },
-      { label: 'Open Roles', value: '142 FTE', change: '+18', positive: false },
-    ],
-    suggestions: ['Which departments have highest turnover?', 'What is the cost of attrition?', 'Show retention trends by zone'],
-  },
-  headcount: {
-    content: `**Headcount Snapshot — FY 2026**\n\nTotal headcount stands at **112,500 FTE**, up 2.1% YoY. Growth is concentrated in Clinical Operations (+3.2%) while Administrative functions show a slight reduction (-0.8%).\n\n**Distribution:**\n• Clinical: 87,750 FTE (78%)\n• Allied Health: 13,500 FTE (12%)\n• Administrative: 11,250 FTE (10%)`,
-    kpis: [
-      { label: 'Total Headcount', value: '112,500', change: '+2.1%', positive: true },
-      { label: 'Clinical FTE', value: '87,750', change: '+3.2%', positive: true },
-      { label: 'Vacancy Rate', value: '5.2%', change: '+1.1%', positive: false },
-      { label: 'New Hires YTD', value: '3,240', change: '+15%', positive: true },
-    ],
-    chart: { type: 'bar', data: [{ dept: 'Clinical', value: 87750 }, { dept: 'Allied', value: 13500 }, { dept: 'Admin', value: 11250 }], dataKey: 'value', nameKey: 'dept', title: 'Headcount by Division', color: '#10b981' },
-    suggestions: ['Show headcount by zone', 'Compare headcount growth YoY', 'What is our vacancy rate by department?'],
-  },
+const STARTERS = [
+  'Show me overtime trends by zone',
+  'What is our attrition risk?',
+  'Summarize current headcount',
+  'Which departments have the highest flight risk?',
+  'What actions should we take for retention?',
+  'Compare overtime cost to budget',
+];
+
+// ── API Key Modal ───────────────────────────────────────────────────────────
+
+const ApiKeyModal: React.FC<{
+  isOpen: boolean;
+  onClose: () => void;
+  onSave: (key: string) => void;
+}> = ({ isOpen, onClose, onSave }) => {
+  const [keyInput, setKeyInput] = useState('');
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm animate-fade-in">
+      <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-2xl p-6 max-w-md w-full mx-4">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <div className="p-2 rounded-xl bg-violet-100 dark:bg-violet-900/30">
+              <Key size={16} className="text-violet-600 dark:text-violet-400" />
+            </div>
+            <h3 className="text-lg font-extrabold text-slate-800 dark:text-white">Connect Gemini AI</h3>
+          </div>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:hover:text-white transition-colors">
+            <X size={18} />
+          </button>
+        </div>
+        <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
+          Enter your Google Gemini API key to enable live AI-powered analytics. The key is stored locally in your browser.
+        </p>
+        <div className="space-y-3">
+          <input
+            type="password"
+            value={keyInput}
+            onChange={e => setKeyInput(e.target.value)}
+            placeholder="AIzaSy..."
+            className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-sm text-slate-800 dark:text-white placeholder:text-slate-400 outline-none focus:ring-2 focus:ring-violet-300 dark:focus:ring-violet-700 transition-all"
+          />
+          <div className="flex gap-2">
+            <button
+              onClick={() => { onSave(keyInput); setKeyInput(''); }}
+              disabled={!keyInput.trim()}
+              className="flex-1 py-2.5 rounded-xl bg-[#002f56] text-white text-sm font-extrabold hover:bg-[#003f73] disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+            >
+              Connect
+            </button>
+            <button
+              onClick={onClose}
+              className="px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-sm font-bold text-slate-500 hover:text-slate-700 dark:hover:text-white transition-all"
+            >
+              Skip (Offline Mode)
+            </button>
+          </div>
+        </div>
+        <p className="text-[10px] text-slate-400 mt-3">
+          Get your API key at <span className="text-violet-500 font-bold">aistudio.google.com</span>
+        </p>
+      </div>
+    </div>
+  );
 };
 
-const matchIntent = (msg: string): string | null => {
-  const m = msg.toLowerCase();
-  if (m.includes('overtime') || m.includes(' ot ') || m.includes('hours')) return 'overtime';
-  if (m.includes('attrition') || m.includes('turnover') || m.includes('retention')) return 'attrition';
-  if (m.includes('headcount') || m.includes('staff') || m.includes('employee')) return 'headcount';
-  return null;
-};
-
-const STARTERS = ['Show me overtime trends', 'What is our attrition rate?', 'Summarize current headcount', 'Which department has highest risk?'];
+// ── Main Component ──────────────────────────────────────────────────────────
 
 export const AICopilotView: React.FC<{ isDarkMode?: boolean }> = ({ isDarkMode }) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showKeyModal, setShowKeyModal] = useState(false);
+  const [isConnected, setIsConnected] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
+
+  // Check for API key on mount
+  useEffect(() => {
+    const key = getApiKey();
+    if (key) {
+      setIsConnected(true);
+    } else {
+      setShowKeyModal(true);
+    }
+  }, []);
 
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
 
-  const send = (text: string) => {
+  const handleSaveKey = (key: string) => {
+    setApiKey(key);
+    setIsConnected(true);
+    setShowKeyModal(false);
+  };
+
+  const handleDisconnect = () => {
+    clearApiKey();
+    setIsConnected(false);
+  };
+
+  const send = async (text: string) => {
     if (!text.trim() || loading) return;
-    const userMsg: Message = { id: Date.now().toString(), role: 'user', content: text, timestamp: new Date() };
+
+    const userMsg: Message = {
+      id: Date.now().toString(),
+      role: 'user',
+      content: text,
+      timestamp: new Date(),
+    };
+
     setMessages(prev => [...prev, userMsg]);
     setInput('');
     setLoading(true);
-    setTimeout(() => {
-      const intent = matchIntent(text) || 'unknown';
-      const defaultResp: Omit<Message, 'id' | 'role' | 'timestamp'> = {
-        content: `**I don't have that information right now.**\n\nI am currently optimized to answer questions about **overtime**, **attrition**, and **headcount** metrics. Please ask me about these topics, or use one of the suggestions below.`,
-        suggestions: ['Show me overtime trends', 'What is our attrition rate?']
+
+    try {
+      const response = await askGemini(text);
+
+      const aiMsg: Message = {
+        id: (Date.now() + 1).toString(),
+        role: 'assistant',
+        timestamp: new Date(),
+        content: response.content,
+        kpis: response.kpis,
+        chart: response.chart,
+        suggestions: response.suggestions,
+        isLive: isConnected,
       };
-      const resp = RESPONSES[intent] || defaultResp;
-      const aiMsg: Message = { id: (Date.now() + 1).toString(), role: 'assistant', timestamp: new Date(), ...resp };
+
       setMessages(prev => [...prev, aiMsg]);
+    } catch {
+      const errorMsg: Message = {
+        id: (Date.now() + 1).toString(),
+        role: 'assistant',
+        timestamp: new Date(),
+        content: '**Something went wrong.**\n\nI couldn\'t process your request. Please try again, or check your API key in settings.',
+        suggestions: ['Show me overtime trends', 'What is our attrition rate?'],
+      };
+      setMessages(prev => [...prev, errorMsg]);
+    } finally {
       setLoading(false);
-    }, 1200);
+    }
   };
 
   const renderContent = (content: string) => content
@@ -100,7 +179,36 @@ export const AICopilotView: React.FC<{ isDarkMode?: boolean }> = ({ isDarkMode }
 
   return (
     <div className="flex flex-col h-[calc(100vh-64px)] max-w-4xl mx-auto px-4 py-6 animate-fade-in">
-      <SectionGuide isAI title="AI Workforce Copilot" description="Ask natural language questions about your workforce data. The copilot uses your HR data to provide instant analysis, trend summaries, and strategic recommendations." tips={['Try: "Show me overtime trends", "What is our attrition risk?"']} />
+      <SectionGuide
+        isAI
+        title="AI Workforce Copilot"
+        description="Ask natural language questions about your workforce data. The copilot analyzes your HR data using Google Gemini AI to provide instant analysis, trend summaries, and strategic recommendations."
+        tips={['Try: "Show me overtime trends by zone", "What actions should we take for retention?"']}
+      />
+
+      {/* Connection status bar */}
+      <div className="flex items-center justify-between mb-4 px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+        <div className="flex items-center gap-2">
+          {isConnected ? (
+            <>
+              <Wifi size={12} className="text-emerald-500" />
+              <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400">Gemini AI Connected</span>
+            </>
+          ) : (
+            <>
+              <WifiOff size={12} className="text-amber-500" />
+              <span className="text-[11px] font-bold text-amber-600 dark:text-amber-400">Offline Mode — using cached analytics</span>
+            </>
+          )}
+        </div>
+        <button
+          onClick={() => isConnected ? handleDisconnect() : setShowKeyModal(true)}
+          className="flex items-center gap-1 text-[10px] font-bold text-slate-400 hover:text-slate-700 dark:hover:text-white transition-colors"
+        >
+          <Settings size={11} />
+          {isConnected ? 'Disconnect' : 'Connect API'}
+        </button>
+      </div>
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto space-y-6 mb-4">
@@ -110,8 +218,13 @@ export const AICopilotView: React.FC<{ isDarkMode?: boolean }> = ({ isDarkMode }
               <Sparkles size={40} className="text-violet-600 dark:text-violet-400" />
             </div>
             <h3 className="text-xl font-extrabold text-slate-800 dark:text-white">How can I help you today?</h3>
-            <p className="text-sm text-slate-500 text-center max-w-xs">Ask anything about your workforce data — attrition, overtime, headcount, or hiring trends.</p>
-            <div className="flex flex-wrap gap-2 justify-center mt-2">
+            <p className="text-sm text-slate-500 text-center max-w-sm">
+              {isConnected
+                ? 'Ask anything about your workforce data — powered by Google Gemini AI.'
+                : 'Ask about overtime, attrition, headcount, or hiring trends. Connect a Gemini API key for enhanced AI analysis.'
+              }
+            </p>
+            <div className="flex flex-wrap gap-2 justify-center mt-2 max-w-lg">
               {STARTERS.map(s => (
                 <button key={s} onClick={() => send(s)} className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-600 dark:text-slate-300 hover:border-violet-300 hover:text-violet-700 dark:hover:text-violet-300 transition-all shadow-sm">
                   <ChevronRight size={12} className="text-violet-400" /> {s}
@@ -185,6 +298,15 @@ export const AICopilotView: React.FC<{ isDarkMode?: boolean }> = ({ isDarkMode }
                     <button className="flex items-center gap-1 text-[10px] font-bold text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors">
                       <ThumbsDown size={11} /> Not helpful
                     </button>
+                    {msg.isLive !== undefined && (
+                      <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-md ml-auto ${
+                        msg.isLive
+                          ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400'
+                          : 'bg-slate-100 dark:bg-slate-700 text-slate-500'
+                      }`}>
+                        {msg.isLive ? '⚡ Live AI' : '📦 Cached'}
+                      </span>
+                    )}
                     <button className="flex items-center gap-1 text-[10px] font-bold text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors ml-auto">
                       <Copy size={11} /> Copy
                     </button>
@@ -208,7 +330,7 @@ export const AICopilotView: React.FC<{ isDarkMode?: boolean }> = ({ isDarkMode }
             <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl rounded-tl-sm px-5 py-4 shadow-sm">
               <div className="flex items-center gap-2 text-slate-400">
                 <Loader2 size={14} className="animate-spin" />
-                <span className="text-sm">Analyzing your data...</span>
+                <span className="text-sm">{isConnected ? 'Analyzing with Gemini AI...' : 'Analyzing your data...'}</span>
               </div>
             </div>
           </div>
@@ -222,7 +344,7 @@ export const AICopilotView: React.FC<{ isDarkMode?: boolean }> = ({ isDarkMode }
           value={input}
           onChange={e => setInput(e.target.value)}
           onKeyDown={e => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), send(input))}
-          placeholder="Ask about overtime, attrition, headcount..."
+          placeholder={isConnected ? 'Ask Gemini about your workforce data...' : 'Ask about overtime, attrition, headcount...'}
           className="flex-1 text-sm bg-transparent outline-none text-slate-800 dark:text-white placeholder:text-slate-400 px-2"
         />
         <button
@@ -233,6 +355,13 @@ export const AICopilotView: React.FC<{ isDarkMode?: boolean }> = ({ isDarkMode }
           <Send size={16} />
         </button>
       </div>
+
+      {/* API Key Modal */}
+      <ApiKeyModal
+        isOpen={showKeyModal}
+        onClose={() => setShowKeyModal(false)}
+        onSave={handleSaveKey}
+      />
     </div>
   );
 };
