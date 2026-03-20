@@ -389,7 +389,7 @@ export const ReportGeneratorView: React.FC<ReportGeneratorViewProps> = ({ isDark
                   )}
 
                   <p className="text-[10px] text-slate-400 text-center pt-2 border-t border-slate-100 dark:border-slate-700">
-                    Confidential — {ORG_NAME} HR Intelligence Hub · {new Date().toLocaleDateString('en-CA')}
+                    Confidential — {ORG_NAME} Intelligence · {new Date().toLocaleDateString('en-CA')}
                   </p>
                 </div>
               </div>
